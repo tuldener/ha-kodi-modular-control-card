@@ -1,0 +1,7 @@
+{
+  "name": "Kodi Modular Control Card",
+  "content_in_root": true,
+  "filename": "kodi-modular-control-card.js",
+  "homeassistant": "2024.1.0",
+  "render_readme": true
+}
