@@ -400,6 +400,7 @@ class KodiModularControlCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
+    const hadType = !!(config && config.type);
     this._config = {
       type: config.type || `custom:${CARD_NAME}`,
       title: config.title || "Kodi Modular Control",
@@ -407,6 +408,10 @@ class KodiModularControlCardEditor extends HTMLElement {
         ? config.entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
         : []
     };
+    if (!hadType) {
+      // Self-heal legacy/invalid configs created without required Lovelace "type".
+      this._notifyConfigChanged();
+    }
     this._render();
   }
 
