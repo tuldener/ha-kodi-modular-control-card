@@ -401,6 +401,7 @@ class KodiModularControlCardEditor extends HTMLElement {
 
   setConfig(config) {
     this._config = {
+      type: config.type || `custom:${CARD_NAME}`,
       title: config.title || "Kodi Modular Control",
       entities: Array.isArray(config.entities)
         ? config.entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
@@ -718,9 +719,13 @@ class KodiModularControlCardEditor extends HTMLElement {
   }
 
   _notifyConfigChanged() {
+    const nextConfig = {
+      ...this._config,
+      type: this._config.type || `custom:${CARD_NAME}`
+    };
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config: this._config },
+        detail: { config: nextConfig },
         bubbles: true,
         composed: true
       })
