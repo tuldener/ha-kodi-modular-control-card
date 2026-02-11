@@ -335,6 +335,22 @@ const CONTROL_DEFINITIONS = [
       service: "turn_on",
       service_data: { entity_id: "script.example" }
     }
+  },
+  {
+    key: "system_reboot",
+    category: "System",
+    label: "System.Reboot",
+    method: "System.Reboot",
+    defaultIcon: "mdi:restart",
+    defaultParams: {}
+  },
+  {
+    key: "system_shutdown",
+    category: "System",
+    label: "System.Shutdown",
+    method: "System.Shutdown",
+    defaultIcon: "mdi:power",
+    defaultParams: {}
   }
 ];
 

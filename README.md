@@ -16,6 +16,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
   - `AudioLibrary`
   - `VideoLibrary`
   - `Player`
+  - `System`
   - `Home Assistant` (Script/Service Trigger)
 - Auswahl der Kontrollfunktion per Dropdown
 - Icon-Auswahl über Home-Assistant Standard `ha-icon-picker` (Suche + Dropdown + Vorschau kombiniert)
@@ -98,6 +99,10 @@ entities:
 - `Script: Play Video by Genre`
 - `Script: Play Audio+Video by Genre`
 - `Service Call (Advanced)`
+
+### System
+- `System.Reboot`
+- `System.Shutdown`
 
 Beispiel für ein Modul, das ein HA-Script startet:
 
