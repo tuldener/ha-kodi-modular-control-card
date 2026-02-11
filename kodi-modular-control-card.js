@@ -340,6 +340,7 @@ class KodiModularControlCard extends HTMLElement {
 
   connectedCallback() {
     this._startStateRefreshTimer();
+    this._refreshToggleStateCache();
   }
 
   disconnectedCallback() {
@@ -468,6 +469,18 @@ class KodiModularControlCard extends HTMLElement {
           color: rgba(150, 150, 150, 0.9);
         }
 
+        .control.state-repeat-off ha-icon {
+          color: rgba(150, 150, 150, 0.9);
+        }
+
+        .control.state-repeat-one ha-icon {
+          color: rgba(120, 190, 255, 0.96);
+        }
+
+        .control.state-repeat-all ha-icon {
+          color: rgba(255, 255, 255, 0.96);
+        }
+
         .empty {
           padding: 6px 2px;
           color: var(--secondary-text-color);
@@ -551,16 +564,16 @@ class KodiModularControlCard extends HTMLElement {
         await this._hass.callService("kodi", "call_method", payload);
       }
       this._applyOptimisticToggleState(entityId, moduleKey, mergedParams);
+      this._refreshToggleStateFromKodi(entityId);
     } catch (err) {
       // Keep errors in browser console; card UI stays control-only by design.
       // eslint-disable-next-line no-console
       console.error(`Kodi control failed (${definition.label})`, err);
     } finally {
       this._busy = false;
-      // Immediate follow-up sync from HA entity attrs after action.
+      // Immediate follow-up full sync after action.
       setTimeout(() => {
-        this._syncToggleStateCacheFromEntityAttributes();
-        this._render();
+        this._refreshToggleStateCache();
       }, 1000);
       this._render();
     }
@@ -579,7 +592,11 @@ class KodiModularControlCard extends HTMLElement {
       return cache.shuffleOn ? "state-on" : "state-off";
     }
     if (isRepeatKey && typeof cache.repeatOn === "boolean") {
-      return cache.repeatOn ? "state-on" : "state-off";
+      const repeatMode = (cache.repeatMode || "").toLowerCase();
+      if (repeatMode === "one") return "state-repeat-one";
+      if (repeatMode === "all") return "state-repeat-all";
+      if (repeatMode === "off" || repeatMode === "none") return "state-repeat-off";
+      return cache.repeatOn ? "state-repeat-all" : "state-repeat-off";
     }
 
     if (isShuffleKey) {
@@ -588,16 +605,17 @@ class KodiModularControlCard extends HTMLElement {
       return "state-off";
     }
 
-    const repeatState = this._readRepeatStateFromEntity(entityId);
-    if (typeof repeatState === "boolean") return repeatState ? "state-on" : "state-off";
-    return "state-off";
+    const repeatMode = this._readRepeatModeFromEntity(entityId);
+    if (repeatMode === "one") return "state-repeat-one";
+    if (repeatMode === "all") return "state-repeat-all";
+    if (repeatMode === "off" || repeatMode === "none") return "state-repeat-off";
+    return "state-repeat-off";
   }
 
   _startStateRefreshTimer() {
     this._stopStateRefreshTimer();
     this._stateRefreshTimer = setInterval(() => {
-      this._syncToggleStateCacheFromEntityAttributes();
-      this._render();
+      this._refreshToggleStateCache();
     }, 60000);
   }
 
@@ -629,6 +647,54 @@ class KodiModularControlCard extends HTMLElement {
       }
       this._toggleStateCache[entityId] = next;
     });
+  }
+
+  async _refreshToggleStateCache() {
+    this._syncToggleStateCacheFromEntityAttributes();
+    const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+    for (const block of entities) {
+      const entityId = block && block.entity ? block.entity : "";
+      if (!entityId) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await this._refreshToggleStateFromKodi(entityId);
+    }
+    this._render();
+  }
+
+  async _refreshToggleStateFromKodi(entityId) {
+    if (!this._hass || !entityId) return;
+    try {
+      const active = await this._hass.callService("kodi", "call_method", {
+        entity_id: entityId,
+        method: "Player.GetActivePlayers"
+      }, true);
+      const players = active && active.result ? active.result : [];
+      if (!Array.isArray(players) || players.length === 0) return;
+      const playerId = players[0] && typeof players[0].playerid !== "undefined" ? players[0].playerid : undefined;
+      if (typeof playerId === "undefined") return;
+
+      const props = await this._hass.callService("kodi", "call_method", {
+        entity_id: entityId,
+        method: "Player.GetProperties",
+        playerid: playerId,
+        properties: ["repeat", "shuffled"]
+      }, true);
+      const result = props && props.result ? props.result : {};
+      const current = { ...(this._toggleStateCache[entityId] || {}) };
+
+      if (typeof result.shuffled === "boolean") {
+        current.shuffleOn = result.shuffled;
+      }
+      if (typeof result.repeat === "string") {
+        const mode = result.repeat.toLowerCase();
+        current.repeatMode = mode;
+        current.repeatOn = !["off", "none", "false", "0"].includes(mode);
+      }
+      this._toggleStateCache[entityId] = current;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.debug("Kodi toggle refresh failed", entityId, err);
+    }
   }
 
   _readShuffleStateFromEntity(entityId) {
