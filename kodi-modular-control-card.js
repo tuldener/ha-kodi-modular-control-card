@@ -334,6 +334,16 @@ class KodiModularControlCard extends HTMLElement {
     this._config = {};
     this._hass = undefined;
     this._busy = false;
+    this._toggleStateCache = {};
+    this._stateRefreshTimer = null;
+  }
+
+  connectedCallback() {
+    this._startStateRefreshTimer();
+  }
+
+  disconnectedCallback() {
+    this._stopStateRefreshTimer();
   }
 
   setConfig(config) {
@@ -341,11 +351,13 @@ class KodiModularControlCard extends HTMLElement {
     this._config = {
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
+    this._syncToggleStateCacheFromEntityAttributes();
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._syncToggleStateCacheFromEntityAttributes();
     this._render();
   }
 
@@ -538,12 +550,18 @@ class KodiModularControlCard extends HTMLElement {
       } else {
         await this._hass.callService("kodi", "call_method", payload);
       }
+      this._applyOptimisticToggleState(entityId, moduleKey, mergedParams);
     } catch (err) {
       // Keep errors in browser console; card UI stays control-only by design.
       // eslint-disable-next-line no-console
       console.error(`Kodi control failed (${definition.label})`, err);
     } finally {
       this._busy = false;
+      // Immediate follow-up sync from HA entity attrs after action.
+      setTimeout(() => {
+        this._syncToggleStateCacheFromEntityAttributes();
+        this._render();
+      }, 1000);
       this._render();
     }
   }
@@ -556,27 +574,142 @@ class KodiModularControlCard extends HTMLElement {
     if (!isShuffleKey && !isRepeatKey) {
       return "";
     }
-    const hassStates = this._hass && this._hass.states ? this._hass.states : {};
-    const stateObj = hassStates[entityId];
-    const attrs = stateObj && stateObj.attributes ? stateObj.attributes : {};
+    const cache = this._toggleStateCache[entityId] || {};
+    if (isShuffleKey && typeof cache.shuffleOn === "boolean") {
+      return cache.shuffleOn ? "state-on" : "state-off";
+    }
+    if (isRepeatKey && typeof cache.repeatOn === "boolean") {
+      return cache.repeatOn ? "state-on" : "state-off";
+    }
 
     if (isShuffleKey) {
-      const value = attrs.shuffle;
-      if (typeof value === "boolean") return value ? "state-on" : "state-off";
-      if (typeof value === "string") {
-        const normalized = value.toLowerCase();
-        return ["off", "false", "none", "0"].includes(normalized) ? "state-off" : "state-on";
-      }
+      const state = this._readShuffleStateFromEntity(entityId);
+      if (typeof state === "boolean") return state ? "state-on" : "state-off";
       return "state-off";
     }
 
-    const repeat = attrs.repeat;
-    if (typeof repeat === "boolean") return repeat ? "state-on" : "state-off";
-    if (typeof repeat === "string") {
-      const normalized = repeat.toLowerCase();
-      return ["off", "false", "none", "0"].includes(normalized) ? "state-off" : "state-on";
-    }
+    const repeatState = this._readRepeatStateFromEntity(entityId);
+    if (typeof repeatState === "boolean") return repeatState ? "state-on" : "state-off";
     return "state-off";
+  }
+
+  _startStateRefreshTimer() {
+    this._stopStateRefreshTimer();
+    this._stateRefreshTimer = setInterval(() => {
+      this._syncToggleStateCacheFromEntityAttributes();
+      this._render();
+    }, 60000);
+  }
+
+  _stopStateRefreshTimer() {
+    if (this._stateRefreshTimer) {
+      clearInterval(this._stateRefreshTimer);
+      this._stateRefreshTimer = null;
+    }
+  }
+
+  _syncToggleStateCacheFromEntityAttributes() {
+    const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+    entities.forEach((block) => {
+      const entityId = block && block.entity ? block.entity : "";
+      if (!entityId) return;
+      const next = { ...(this._toggleStateCache[entityId] || {}) };
+      const shuffleState = this._readShuffleStateFromEntity(entityId);
+      const repeatState = this._readRepeatStateFromEntity(entityId);
+      const repeatMode = this._readRepeatModeFromEntity(entityId);
+
+      if (typeof shuffleState === "boolean") {
+        next.shuffleOn = shuffleState;
+      }
+      if (typeof repeatState === "boolean") {
+        next.repeatOn = repeatState;
+      }
+      if (repeatMode) {
+        next.repeatMode = repeatMode;
+      }
+      this._toggleStateCache[entityId] = next;
+    });
+  }
+
+  _readShuffleStateFromEntity(entityId) {
+    const attrs = this._getEntityAttributes(entityId);
+    const raw =
+      typeof attrs.shuffle !== "undefined"
+        ? attrs.shuffle
+        : attrs.shuffled;
+    if (typeof raw === "boolean") return raw;
+    if (typeof raw === "string") {
+      const normalized = raw.toLowerCase();
+      return !["off", "false", "none", "0"].includes(normalized);
+    }
+    return undefined;
+  }
+
+  _readRepeatModeFromEntity(entityId) {
+    const attrs = this._getEntityAttributes(entityId);
+    const raw = attrs.repeat;
+    if (typeof raw === "string") {
+      const normalized = raw.toLowerCase();
+      if (["off", "none", "one", "all"].includes(normalized)) return normalized;
+      return normalized;
+    }
+    if (typeof raw === "boolean") return raw ? "all" : "off";
+    return undefined;
+  }
+
+  _readRepeatStateFromEntity(entityId) {
+    const mode = this._readRepeatModeFromEntity(entityId);
+    if (typeof mode === "string") {
+      return !["off", "none", "false", "0"].includes(mode);
+    }
+    return undefined;
+  }
+
+  _getEntityAttributes(entityId) {
+    const hassStates = this._hass && this._hass.states ? this._hass.states : {};
+    const stateObj = hassStates[entityId];
+    return stateObj && stateObj.attributes ? stateObj.attributes : {};
+  }
+
+  _applyOptimisticToggleState(entityId, moduleKey, params) {
+    const isShuffleKey =
+      moduleKey === "player_shuffle" || moduleKey === "player_set_shuffle";
+    const isRepeatKey =
+      moduleKey === "player_repeat" || moduleKey === "player_set_repeat";
+    if (!isShuffleKey && !isRepeatKey) return;
+
+    const current = { ...(this._toggleStateCache[entityId] || {}) };
+
+    if (isShuffleKey) {
+      const raw = params && typeof params.shuffle !== "undefined" ? params.shuffle : "toggle";
+      if (raw === "toggle") {
+        current.shuffleOn = !(typeof current.shuffleOn === "boolean" ? current.shuffleOn : false);
+      } else if (typeof raw === "boolean") {
+        current.shuffleOn = raw;
+      } else if (typeof raw === "string") {
+        const normalized = raw.toLowerCase();
+        current.shuffleOn = !["off", "false", "none", "0"].includes(normalized);
+      }
+    }
+
+    if (isRepeatKey) {
+      const raw = params && typeof params.repeat !== "undefined" ? params.repeat : "cycle";
+      const repeatModes = ["off", "one", "all"];
+      if (raw === "cycle") {
+        const currentMode = current.repeatMode && repeatModes.includes(current.repeatMode)
+          ? current.repeatMode
+          : "off";
+        const nextIndex = (repeatModes.indexOf(currentMode) + 1) % repeatModes.length;
+        current.repeatMode = repeatModes[nextIndex];
+      } else if (typeof raw === "string") {
+        current.repeatMode = raw.toLowerCase();
+      } else if (typeof raw === "boolean") {
+        current.repeatMode = raw ? "all" : "off";
+      }
+      current.repeatOn = !["off", "none", "false", "0"].includes(current.repeatMode || "off");
+    }
+
+    this._toggleStateCache[entityId] = current;
   }
 
   _escapeHtml(value) {
