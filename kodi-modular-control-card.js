@@ -417,11 +417,12 @@ class KodiModularControlCard extends HTMLElement {
       <style>
         :host {
           display: block;
-          --kodi-bubble-bg-a: color-mix(in srgb, var(--card-background-color) 86%, #061520 14%);
-          --kodi-bubble-bg-b: color-mix(in srgb, var(--card-background-color) 78%, var(--primary-color) 22%);
-          --kodi-bubble-outline: color-mix(in srgb, var(--divider-color) 65%, var(--primary-color) 35%);
-          --kodi-bubble-btn: color-mix(in srgb, var(--card-background-color) 72%, #00bcd4 28%);
-          --kodi-bubble-btn-hover: color-mix(in srgb, var(--card-background-color) 54%, #00bcd4 46%);
+          --bubble-main-background-color: var(--bubble-media-player-main-background-color, var(--bubble-main-background-color, #252525));
+          --bubble-secondary-background-color: var(--bubble-media-player-icon-background-color, var(--bubble-secondary-background-color, #1f1f1f));
+          --bubble-border-radius: var(--bubble-media-player-border-radius, var(--bubble-border-radius, 30px));
+          --bubble-button-radius: var(--bubble-media-player-buttons-border-radius, 999px);
+          --bubble-icon-radius: var(--bubble-media-player-icon-border-radius, 999px);
+          --bubble-accent-color: var(--bubble-accent-color, #1f97f3);
         }
 
         ha-card {
@@ -432,22 +433,22 @@ class KodiModularControlCard extends HTMLElement {
 
         .wrapper {
           display: grid;
-          gap: 14px;
-          padding: 10px;
+          gap: 12px;
+          padding: 6px 4px;
         }
 
         .entity-block {
-          border-radius: 26px;
-          border: 1px solid var(--kodi-bubble-outline);
+          border-radius: var(--bubble-border-radius);
+          border: 1px solid color-mix(in srgb, var(--divider-color) 78%, transparent 22%);
           background: linear-gradient(
-            160deg,
-            var(--kodi-bubble-bg-a),
-            var(--kodi-bubble-bg-b)
+            180deg,
+            color-mix(in srgb, var(--bubble-main-background-color) 95%, black 5%),
+            color-mix(in srgb, var(--bubble-secondary-background-color) 88%, black 12%)
           );
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 16px 34px rgba(0, 0, 0, 0.24);
-          padding: 18px 16px;
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 6px 14px rgba(0, 0, 0, 0.22);
+          padding: 12px 14px;
           position: relative;
           overflow: hidden;
         }
@@ -456,16 +457,19 @@ class KodiModularControlCard extends HTMLElement {
           content: "";
           position: absolute;
           inset: 0;
-          background:
-            radial-gradient(120px 40px at 20% -10%, rgba(255, 255, 255, 0.12), transparent 70%),
-            radial-gradient(120px 40px at 80% 110%, rgba(0, 188, 212, 0.11), transparent 70%);
+          background: radial-gradient(
+            140px 50px at 18% -8%,
+            rgba(255, 255, 255, 0.08),
+            transparent 72%
+          );
           pointer-events: none;
         }
 
         .controls {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
-          gap: 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-start;
           align-items: center;
         }
 
@@ -473,34 +477,32 @@ class KodiModularControlCard extends HTMLElement {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid color-mix(in srgb, #00bcd4 42%, var(--divider-color) 58%);
-          border-radius: 18px;
-          min-height: 54px;
-          min-width: 54px;
+          border: 0;
+          border-radius: var(--bubble-icon-radius);
+          height: 44px;
+          width: 44px;
           cursor: pointer;
-          color: var(--primary-text-color);
-          background: linear-gradient(
-            165deg,
-            var(--kodi-bubble-btn),
-            color-mix(in srgb, var(--kodi-bubble-btn) 70%, #05141d 30%)
-          );
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.09),
-            0 8px 18px rgba(0, 0, 0, 0.22);
-          transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
-          backdrop-filter: blur(2px);
+          color: color-mix(in srgb, var(--primary-text-color) 92%, white 8%);
+          background: transparent;
+          box-shadow: none;
+          transition: transform 120ms ease, background-color 120ms ease, color 120ms ease;
         }
 
         .control:hover {
-          transform: translateY(-2px);
-          background: linear-gradient(
-            165deg,
-            var(--kodi-bubble-btn-hover),
-            color-mix(in srgb, var(--kodi-bubble-btn-hover) 74%, #05141d 26%)
-          );
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.16),
-            0 11px 24px rgba(0, 0, 0, 0.28);
+          transform: translateY(-1px);
+          background: color-mix(in srgb, var(--bubble-secondary-background-color) 72%, white 28%);
+        }
+
+        .control.is-primary {
+          height: 60px;
+          width: 60px;
+          background: var(--bubble-accent-color);
+          color: #fff;
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+        }
+
+        .control.is-primary:hover {
+          background: color-mix(in srgb, var(--bubble-accent-color) 84%, white 16%);
         }
 
         .control[disabled] {
@@ -509,7 +511,7 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.state-on ha-icon {
-          color: rgba(80, 220, 120, 0.98);
+          color: #41c36d;
         }
 
         .control.state-off ha-icon {
@@ -521,11 +523,11 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.state-repeat-one ha-icon {
-          color: rgba(255, 170, 70, 0.98);
+          color: #f29d35;
         }
 
         .control.state-repeat-all ha-icon {
-          color: rgba(80, 220, 120, 0.98);
+          color: #41c36d;
         }
 
         .empty {
@@ -540,19 +542,22 @@ class KodiModularControlCard extends HTMLElement {
 
         @media (max-width: 600px) {
           .entity-block {
-            padding: 14px 12px;
-            border-radius: 22px;
+            padding: 10px 12px;
+            border-radius: 24px;
           }
 
           .controls {
-            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-            gap: 10px;
+            gap: 8px;
           }
 
           .control {
-            min-height: 48px;
-            min-width: 48px;
-            border-radius: 15px;
+            height: 40px;
+            width: 40px;
+          }
+
+          .control.is-primary {
+            height: 54px;
+            width: 54px;
           }
 
           ha-icon {
@@ -582,8 +587,9 @@ class KodiModularControlCard extends HTMLElement {
             const definition = CONTROL_DEFINITIONS.find((item) => item.key === module.key);
             if (!definition) return "";
             const stateClass = this._getToggleStateClass(entityId, module.key);
+            const bubbleClass = this._getBubbleControlClass(module.key);
             return `
-              <button class="control ${stateClass}" data-entity="${this._escapeHtml(entityId)}" data-module="${this._escapeHtml(module.key)}" title="${this._escapeHtml(definition.label)}" ${this._busy ? "disabled" : ""}>
+              <button class="control ${bubbleClass} ${stateClass}" data-entity="${this._escapeHtml(entityId)}" data-module="${this._escapeHtml(module.key)}" title="${this._escapeHtml(definition.label)}" ${this._busy ? "disabled" : ""}>
                 <ha-icon icon="${this._escapeHtml(module.icon || definition.defaultIcon)}"></ha-icon>
               </button>
             `;
@@ -866,6 +872,11 @@ class KodiModularControlCard extends HTMLElement {
     const hassStates = this._hass && this._hass.states ? this._hass.states : {};
     const stateObj = hassStates[entityId];
     return stateObj && stateObj.attributes ? stateObj.attributes : {};
+  }
+
+  _getBubbleControlClass(moduleKey) {
+    if (moduleKey === "player_playpause") return "is-primary";
+    return "";
   }
 
   _applyOptimisticToggleState(entityId, moduleKey, params) {
