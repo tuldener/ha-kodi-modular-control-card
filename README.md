@@ -125,5 +125,5 @@ playerid: 1
 
 ## Hinweise
 
-- Für manche `Player.*` Methoden muss `playerid` zur aktiven Wiedergabe passen.
+- Für `Player.*` Methoden mit `playerid` löst die Karte die aktive `playerid` pro Kodi-Instanz automatisch auf (Fallback auf konfigurierten Wert).
 - Zusätzliche JSON-RPC-Methoden können über weitere Module im Code ergänzt werden.

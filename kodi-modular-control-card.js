@@ -1,6 +1,27 @@
 const CARD_NAME = "ha-kodi-modular-control-card";
 const CARD_EDITOR_NAME = "ha-kodi-modular-control-card-editor";
 const CARD_VERSION = "2026.02.11.2";
+const PLAYER_METHODS_REQUIRING_ID = new Set([
+  "Player.AddSubtitle",
+  "Player.GetItem",
+  "Player.GetProperties",
+  "Player.GetViewMode",
+  "Player.GoTo",
+  "Player.Move",
+  "Player.PlayPause",
+  "Player.Rotate",
+  "Player.Seek",
+  "Player.SetAudioStream",
+  "Player.SetPartymode",
+  "Player.SetRepeat",
+  "Player.SetShuffle",
+  "Player.SetSpeed",
+  "Player.SetSubtitle",
+  "Player.SetVideoStream",
+  "Player.SetViewMode",
+  "Player.Stop",
+  "Player.Zoom"
+]);
 
 const CONTROL_DEFINITIONS = [
   {
@@ -699,6 +720,12 @@ class KodiModularControlCard extends HTMLElement {
       ...(definition.defaultParams || {}),
       ...(module.params || {})
     };
+    if (definition.method !== "__ha_service__" && PLAYER_METHODS_REQUIRING_ID.has(definition.method)) {
+      const resolvedPlayerId = this._resolvePlayerId(entityId, mergedParams);
+      if (typeof resolvedPlayerId !== "undefined") {
+        mergedParams.playerid = resolvedPlayerId;
+      }
+    }
 
     const payload = {
       entity_id: entityId,
@@ -861,6 +888,7 @@ class KodiModularControlCard extends HTMLElement {
     if (!props || typeof props !== "object") return;
 
     const current = { ...(this._toggleStateCache[entityId] || {}) };
+    current.playerId = playerId;
     if (typeof props.shuffled === "boolean") {
       current.shuffleOn = props.shuffled;
     }
@@ -969,6 +997,17 @@ class KodiModularControlCard extends HTMLElement {
     const hassStates = this._hass && this._hass.states ? this._hass.states : {};
     const stateObj = hassStates[entityId];
     return stateObj && stateObj.attributes ? stateObj.attributes : {};
+  }
+
+  _resolvePlayerId(entityId, mergedParams) {
+    const cache = this._toggleStateCache[entityId] || {};
+    if (typeof cache.playerId !== "undefined" && cache.playerId !== null) {
+      return cache.playerId;
+    }
+    if (typeof mergedParams.playerid !== "undefined" && mergedParams.playerid !== null) {
+      return mergedParams.playerid;
+    }
+    return undefined;
   }
 
   _getNowPlayingTitle(entityId) {
