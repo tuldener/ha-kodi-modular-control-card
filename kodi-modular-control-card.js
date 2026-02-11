@@ -360,6 +360,7 @@ class KodiModularControlCard extends HTMLElement {
     this._stateRefreshTimer = null;
     this._statusRefreshInFlight = false;
     this._titleRefreshTimer = null;
+    this._debugEntries = [];
   }
 
   connectedCallback() {
@@ -377,6 +378,7 @@ class KodiModularControlCard extends HTMLElement {
     const entities = Array.isArray(config.entities) ? config.entities : [];
     this._config = {
       size: this._normalizeSize(config.size),
+      debug: !!config.debug,
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._syncToggleStateCacheFromEntityAttributes();
@@ -395,6 +397,7 @@ class KodiModularControlCard extends HTMLElement {
     return {
       type: `custom:${CARD_NAME}`,
       size: "normal",
+      debug: false,
       entities: [
         {
           entity: "media_player.kodi_wohnzimmer",
@@ -436,11 +439,13 @@ class KodiModularControlCard extends HTMLElement {
           .map((entityBlock) => this._renderEntityBlock(entityBlock))
           .join("")
       : `<div class="empty">Füge im Editor mindestens eine Kodi-Instanz hinzu.</div>`;
+    const debugHtml = this._config.debug ? this._renderDebugPanel() : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
         <div class="wrapper">
           ${entityHtml}
+          ${debugHtml}
         </div>
       </ha-card>
       <style>
@@ -613,6 +618,29 @@ class KodiModularControlCard extends HTMLElement {
           font-size: 14px;
         }
 
+        .debug-panel {
+          border-radius: 14px;
+          border: 1px dashed color-mix(in srgb, var(--divider-color) 80%, transparent 20%);
+          padding: 8px 10px;
+          background: color-mix(in srgb, var(--card-background-color) 85%, black 15%);
+          display: grid;
+          gap: 6px;
+        }
+
+        .debug-title {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+          font-weight: 600;
+        }
+
+        .debug-row {
+          font-size: 11px;
+          color: var(--primary-text-color);
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
         ha-icon {
           --mdc-icon-size: var(--icon-size);
         }
@@ -708,6 +736,20 @@ class KodiModularControlCard extends HTMLElement {
     `;
   }
 
+  _renderDebugPanel() {
+    const rows = this._debugEntries.length
+      ? this._debugEntries
+          .map((entry) => `<div class="debug-row">${this._escapeHtml(entry)}</div>`)
+          .join("")
+      : `<div class="debug-row">Noch keine Rueckmeldung.</div>`;
+    return `
+      <section class="debug-panel">
+        <div class="debug-title">Debug Rueckmeldungen (letzte 5)</div>
+        ${rows}
+      </section>
+    `;
+  }
+
   async _executeControl(entityId, moduleKey) {
     if (!this._hass) return;
 
@@ -736,6 +778,7 @@ class KodiModularControlCard extends HTMLElement {
     try {
       this._busy = true;
       this._render();
+      let responsePayload = null;
       if (definition.method === "__ha_service__") {
         const domain = mergedParams.domain || "script";
         const service = mergedParams.service || "turn_on";
@@ -748,12 +791,18 @@ class KodiModularControlCard extends HTMLElement {
           delete serviceData.service;
           delete serviceData.service_data;
         }
-        await this._hass.callService(domain, service, serviceData);
+        responsePayload = await this._callServiceWithOptionalResponse(domain, service, serviceData);
       } else {
-        await this._hass.callService("kodi", "call_method", payload);
+        responsePayload = await this._callServiceWithOptionalResponse("kodi", "call_method", payload);
       }
       this._applyOptimisticToggleState(entityId, moduleKey, mergedParams);
+      this._addDebugEntry(
+        `${new Date().toLocaleTimeString()} ${entityId} ${definition.method} -> ${this._formatDebugPayload(responsePayload)}`
+      );
     } catch (err) {
+      this._addDebugEntry(
+        `${new Date().toLocaleTimeString()} ${entityId} ${definition.method} ERROR -> ${(err && err.message) || err}`
+      );
       // Keep errors in browser console; card UI stays control-only by design.
       // eslint-disable-next-line no-console
       console.error(`Kodi control failed (${definition.label})`, err);
@@ -913,6 +962,18 @@ class KodiModularControlCard extends HTMLElement {
     }
   }
 
+  async _callServiceWithOptionalResponse(domain, service, data) {
+    if (this._config.debug && this._hass && this._hass.callApi) {
+      try {
+        return await this._hass.callApi("POST", `services/${domain}/${service}?return_response`, data || {});
+      } catch (err) {
+        // fall through to callService
+      }
+    }
+    await this._hass.callService(domain, service, data || {});
+    return null;
+  }
+
   _extractKodiResult(response) {
     if (!response) return null;
 
@@ -1022,6 +1083,20 @@ class KodiModularControlCard extends HTMLElement {
     return entityId || "Kodi";
   }
 
+  _addDebugEntry(entry) {
+    if (!this._config.debug) return;
+    this._debugEntries = [entry, ...(this._debugEntries || [])].slice(0, 5);
+  }
+
+  _formatDebugPayload(payload) {
+    if (payload === null || typeof payload === "undefined") return "ok (ohne response)";
+    try {
+      return JSON.stringify(payload);
+    } catch (err) {
+      return String(payload);
+    }
+  }
+
   _normalizeSize(value) {
     return value === "large" ? "large" : "normal";
   }
@@ -1095,6 +1170,7 @@ class KodiModularControlCardEditor extends HTMLElement {
     this._config = {
       type: config.type || `custom:${CARD_NAME}`,
       size: config.size === "large" ? "large" : "normal",
+      debug: !!config.debug,
       entities: Array.isArray(config.entities)
         ? config.entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
         : []
@@ -1179,6 +1255,12 @@ class KodiModularControlCardEditor extends HTMLElement {
             <option value="large" ${this._config.size === "large" ? "selected" : ""}>Large</option>
           </select>
         </label>
+        <label>Debug Response Anzeige
+          <select id="debug">
+            <option value="off" ${this._config.debug ? "" : "selected"}>Aus</option>
+            <option value="on" ${this._config.debug ? "selected" : ""}>Ein</option>
+          </select>
+        </label>
         <div class="entity-list">${entityRows || "<div class='empty'>Noch keine Kodi Instanz angelegt.</div>"}</div>
         <button id="add-entity">Kodi Instanz hinzufügen</button>
       </div>
@@ -1257,6 +1339,14 @@ class KodiModularControlCardEditor extends HTMLElement {
     if (sizeSelect) {
       sizeSelect.addEventListener("change", (ev) => {
         this._config = { ...this._config, size: ev.target.value === "large" ? "large" : "normal" };
+        this._notifyConfigChanged();
+      });
+    }
+
+    const debugSelect = this.shadowRoot.getElementById("debug");
+    if (debugSelect) {
+      debugSelect.addEventListener("change", (ev) => {
+        this._config = { ...this._config, debug: ev.target.value === "on" };
         this._notifyConfigChanged();
       });
     }
@@ -1388,6 +1478,7 @@ class KodiModularControlCardEditor extends HTMLElement {
     const nextConfig = {
       type: this._config.type || `custom:${CARD_NAME}`,
       size: this._config.size === "large" ? "large" : "normal",
+      debug: !!this._config.debug,
       entities: sanitizedEntities
     };
     this.dispatchEvent(

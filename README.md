@@ -11,6 +11,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
 - Modulare Kontrollfelder je Kodi-Instanz
 - Anzeige des aktuell gespielten Titels statt statischem Entity-Namen
 - Größenmodus `normal` oder `large`
+- Optionaler Debug-Modus (`debug: true`) mit Anzeige der letzten 5 Service-Responses
 - Kategorien:
   - `AudioLibrary`
   - `VideoLibrary`
@@ -36,6 +37,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
 ```yaml
 type: custom:ha-kodi-modular-control-card
 size: normal
+debug: false
 entities:
   - entity: media_player.kodi_wohnzimmer
     modules:
