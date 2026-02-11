@@ -13,6 +13,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
   - `AudioLibrary`
   - `VideoLibrary`
   - `Player`
+  - `Home Assistant` (Script/Service Trigger)
 - Auswahl der Kontrollfunktion per Dropdown
 - Icon-Auswahl über Home-Assistant Standard `ha-icon-picker` (Suche + Dropdown + Vorschau kombiniert)
 - Optionale JSON-Parameter pro Modul (z.B. `playerid`, `limits`)
@@ -86,6 +87,24 @@ entities:
 - `Player.SetViewMode`
 - `Player.Stop`
 - `Player.Zoom`
+
+### Home Assistant
+- `Script: Play Audio by Genre`
+- `Script: Play Video by Genre`
+- `Script: Play Audio+Video by Genre`
+- `Service Call (Advanced)`
+
+Beispiel für ein Modul, das ein HA-Script startet:
+
+```yaml
+- key: ha_script_audio_genre
+  icon: mdi:music-box-multiple
+  params:
+    domain: script
+    service: turn_on
+    service_data:
+      entity_id: script.kodi_play_audio_by_genre
+```
 
 ## Service-Aufruf
 

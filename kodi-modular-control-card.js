@@ -265,6 +265,54 @@ const CONTROL_DEFINITIONS = [
     method: "Player.Zoom",
     defaultIcon: "mdi:magnify-plus-outline",
     defaultParams: { playerid: 1, zoom: "in" }
+  },
+  {
+    key: "ha_script_audio_genre",
+    category: "Home Assistant",
+    label: "Script: Play Audio by Genre",
+    method: "__ha_service__",
+    defaultIcon: "mdi:music-box-multiple",
+    defaultParams: {
+      domain: "script",
+      service: "turn_on",
+      service_data: { entity_id: "script.kodi_play_audio_by_genre" }
+    }
+  },
+  {
+    key: "ha_script_video_genre",
+    category: "Home Assistant",
+    label: "Script: Play Video by Genre",
+    method: "__ha_service__",
+    defaultIcon: "mdi:movie-roll",
+    defaultParams: {
+      domain: "script",
+      service: "turn_on",
+      service_data: { entity_id: "script.kodi_play_video_by_genre" }
+    }
+  },
+  {
+    key: "ha_script_av_genre",
+    category: "Home Assistant",
+    label: "Script: Play Audio+Video by Genre",
+    method: "__ha_service__",
+    defaultIcon: "mdi:multimedia",
+    defaultParams: {
+      domain: "script",
+      service: "turn_on",
+      service_data: { entity_id: "script.kodi_play_av_by_genre" }
+    }
+  },
+  {
+    key: "ha_service_call",
+    category: "Home Assistant",
+    label: "Service Call (Advanced)",
+    method: "__ha_service__",
+    defaultIcon: "mdi:home-assistant",
+    defaultParams: {
+      domain: "script",
+      service: "turn_on",
+      service_data: { entity_id: "script.example" }
+    }
   }
 ];
 
@@ -474,7 +522,22 @@ class KodiModularControlCard extends HTMLElement {
     try {
       this._busy = true;
       this._render();
-      await this._hass.callService("kodi", "call_method", payload);
+      if (definition.method === "__ha_service__") {
+        const domain = mergedParams.domain || "script";
+        const service = mergedParams.service || "turn_on";
+        let serviceData = {};
+        if (mergedParams.service_data && typeof mergedParams.service_data === "object") {
+          serviceData = mergedParams.service_data;
+        } else {
+          serviceData = { ...mergedParams };
+          delete serviceData.domain;
+          delete serviceData.service;
+          delete serviceData.service_data;
+        }
+        await this._hass.callService(domain, service, serviceData);
+      } else {
+        await this._hass.callService("kodi", "call_method", payload);
+      }
     } catch (err) {
       // Keep errors in browser console; card UI stays control-only by design.
       // eslint-disable-next-line no-console
