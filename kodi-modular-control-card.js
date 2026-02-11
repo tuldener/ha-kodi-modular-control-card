@@ -1,39 +1,6 @@
 const CARD_NAME = "ha-kodi-modular-control-card";
 const CARD_EDITOR_NAME = "ha-kodi-modular-control-card-editor";
 
-const ICON_OPTIONS = [
-  "mdi:music",
-  "mdi:music-note",
-  "mdi:playlist-music",
-  "mdi:movie-open",
-  "mdi:filmstrip",
-  "mdi:television",
-  "mdi:play",
-  "mdi:pause",
-  "mdi:stop",
-  "mdi:skip-next",
-  "mdi:skip-previous",
-  "mdi:shuffle-variant",
-  "mdi:repeat",
-  "mdi:folder-refresh",
-  "mdi:broom",
-  "mdi:database-search",
-  "mdi:library",
-  "mdi:speaker",
-  "mdi:volume-high",
-  "mdi:remote",
-  "mdi:kodi",
-  "mdi:cast-audio",
-  "mdi:cast-connected",
-  "mdi:movie-roll",
-  "mdi:disc-player",
-  "mdi:multimedia",
-  "mdi:view-dashboard",
-  "mdi:cog",
-  "mdi:application-cog",
-  "mdi:controller-classic"
-];
-
 const CONTROL_DEFINITIONS = [
   {
     key: "audio_scan",
@@ -135,7 +102,6 @@ const CONTROL_DEFINITIONS = [
 
 const defaultEntityBlock = () => ({
   entity: "",
-  title: "",
   modules: []
 });
 
@@ -152,13 +118,11 @@ class KodiModularControlCard extends HTMLElement {
     this._config = {};
     this._hass = undefined;
     this._busy = false;
-    this._status = "";
   }
 
   setConfig(config) {
     const entities = Array.isArray(config.entities) ? config.entities : [];
     this._config = {
-      title: config.title || "Kodi Modular Control",
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._render();
@@ -172,11 +136,9 @@ class KodiModularControlCard extends HTMLElement {
   static getStubConfig() {
     return {
       type: `custom:${CARD_NAME}`,
-      title: "Kodi Modular Control",
       entities: [
         {
           entity: "media_player.kodi_wohnzimmer",
-          title: "Wohnzimmer",
           modules: [
             {
               key: "player_playpause",
@@ -214,10 +176,9 @@ class KodiModularControlCard extends HTMLElement {
       : `<div class="empty">Füge im Editor mindestens eine Kodi-Instanz hinzu.</div>`;
 
     this.shadowRoot.innerHTML = `
-      <ha-card header="${this._escapeHtml(this._config.title || "Kodi Modular Control")}">
+      <ha-card>
         <div class="wrapper">
           ${entityHtml}
-          ${this._status ? `<div class="status">${this._escapeHtml(this._status)}</div>` : ""}
         </div>
       </ha-card>
       <style>
@@ -240,25 +201,6 @@ class KodiModularControlCard extends HTMLElement {
             color-mix(in srgb, var(--card-background-color) 96%, var(--primary-color) 4%)
           );
           padding: 12px;
-        }
-
-        .entity-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
-        }
-
-        .entity-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--primary-text-color);
-        }
-
-        .entity-state {
-          font-size: 12px;
-          color: var(--secondary-text-color);
-          text-transform: capitalize;
         }
 
         .controls {
@@ -296,10 +238,6 @@ class KodiModularControlCard extends HTMLElement {
           font-size: 14px;
         }
 
-        .status {
-          font-size: 12px;
-          color: var(--secondary-text-color);
-        }
       </style>
     `;
 
@@ -314,12 +252,6 @@ class KodiModularControlCard extends HTMLElement {
 
   _renderEntityBlock(entityBlock) {
     const entityId = entityBlock.entity;
-    const hassStates = this._hass && this._hass.states ? this._hass.states : {};
-    const stateObj = hassStates[entityId];
-    const state = stateObj && stateObj.state ? stateObj.state : "unavailable";
-    const friendlyName =
-      stateObj && stateObj.attributes ? stateObj.attributes.friendly_name : "";
-    const displayTitle = entityBlock.title || friendlyName || entityId || "Kodi";
     const modules = Array.isArray(entityBlock.modules) ? entityBlock.modules : [];
 
     const modulesHtml = modules.length
@@ -338,10 +270,6 @@ class KodiModularControlCard extends HTMLElement {
 
     return `
       <section class="entity-block">
-        <div class="entity-header">
-          <div class="entity-title">${this._escapeHtml(displayTitle)}</div>
-          <div class="entity-state">${this._escapeHtml(state)}</div>
-        </div>
         <div class="controls">${modulesHtml}</div>
       </section>
     `;
@@ -368,12 +296,12 @@ class KodiModularControlCard extends HTMLElement {
 
     try {
       this._busy = true;
-      this._status = `Sende ${definition.label} an ${entityId}...`;
       this._render();
       await this._hass.callService("kodi", "call_method", payload);
-      this._status = `${definition.label} an ${entityId} ausgeführt.`;
     } catch (err) {
-      this._status = `Fehler bei ${definition.label}: ${(err && err.message) || err}`;
+      // Keep errors in browser console; card UI stays control-only by design.
+      // eslint-disable-next-line no-console
+      console.error(`Kodi control failed (${definition.label})`, err);
     } finally {
       this._busy = false;
       this._render();
@@ -396,14 +324,12 @@ class KodiModularControlCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = { entities: [] };
     this._hass = undefined;
-    this._iconSearch = "";
   }
 
   setConfig(config) {
     const hadType = !!(config && config.type);
     this._config = {
       type: config.type || `custom:${CARD_NAME}`,
-      title: config.title || "Kodi Modular Control",
       entities: Array.isArray(config.entities)
         ? config.entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
         : []
@@ -432,10 +358,6 @@ class KodiModularControlCardEditor extends HTMLElement {
         return { entityId, friendly };
       });
 
-    const filteredIcons = ICON_OPTIONS.filter((icon) =>
-      icon.toLowerCase().includes((this._iconSearch || "").toLowerCase())
-    );
-
     const entityRows = (this._config.entities || [])
       .map((block, blockIndex) => {
         const moduleRows = (block.modules || [])
@@ -444,24 +366,14 @@ class KodiModularControlCardEditor extends HTMLElement {
               (def) => `<option value="${def.key}" ${module.key === def.key ? "selected" : ""}>${def.category} - ${def.label}</option>`
             ).join("");
 
-            const iconOptions = filteredIcons
-              .map(
-                (icon) => `<option value="${icon}" ${module.icon === icon ? "selected" : ""}>${icon}</option>`
-              )
-              .join("");
-
             return `
               <div class="module-row" data-block="${blockIndex}" data-module="${moduleIndex}">
                 <label>Kontrolloption
                   <select data-field="module-key">${definitionOptions}</select>
                 </label>
-                <label>Icon Suche
-                  <input type="text" data-field="icon-search" value="${this._escapeHtml(this._iconSearch)}" placeholder="z.B. play, movie, music" />
-                </label>
                 <label>Icon
-                  <select data-field="module-icon">${iconOptions}</select>
+                  <ha-icon-picker data-field="module-icon" value="${this._escapeHtml(module.icon || "mdi:kodi")}"></ha-icon-picker>
                 </label>
-                <div class="icon-preview"><ha-icon icon="${this._escapeHtml(module.icon || "mdi:kodi")}"></ha-icon></div>
                 <label>JSON Parameter (optional)
                   <textarea data-field="module-params" rows="3" placeholder='{"playerid": 1}'>${this._escapeHtml(
                     JSON.stringify(module.params || {}, null, 2)
@@ -486,9 +398,6 @@ class KodiModularControlCardEditor extends HTMLElement {
             <label>Entity
               <select data-field="entity">${entitySelectOptions}</select>
             </label>
-            <label>Titel (optional)
-              <input type="text" data-field="title" value="${this._escapeHtml(block.title || "")}" />
-            </label>
             <div class="module-list">${moduleRows || "<div class='empty'>Noch keine Module.</div>"}</div>
             <button data-action="add-module">Modul hinzufügen</button>
             <button class="danger" data-action="remove-entity">Kodi Instanz entfernen</button>
@@ -499,9 +408,6 @@ class KodiModularControlCardEditor extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <div class="editor">
-        <label>Kartentitel
-          <input type="text" id="title" value="${this._escapeHtml(this._config.title || "")}" />
-        </label>
         <div class="entity-list">${entityRows || "<div class='empty'>Noch keine Kodi Instanz angelegt.</div>"}</div>
         <button id="add-entity">Kodi Instanz hinzufügen</button>
       </div>
@@ -521,13 +427,15 @@ class KodiModularControlCardEditor extends HTMLElement {
         input,
         select,
         textarea,
+        ha-icon-picker,
         button {
           font: inherit;
         }
 
         input,
         select,
-        textarea {
+        textarea,
+        ha-icon-picker {
           border: 1px solid var(--divider-color);
           border-radius: 8px;
           padding: 8px;
@@ -567,30 +475,12 @@ class KodiModularControlCardEditor extends HTMLElement {
           gap: 10px;
         }
 
-        .icon-preview {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 38px;
-          height: 38px;
-          border: 1px solid var(--divider-color);
-          border-radius: 8px;
-        }
-
         .empty {
           font-size: 12px;
           color: var(--secondary-text-color);
         }
       </style>
     `;
-
-    const titleInput = this.shadowRoot.getElementById("title");
-    if (titleInput) {
-      titleInput.addEventListener("input", (ev) => {
-        this._config = { ...this._config, title: ev.target.value };
-        this._notifyConfigChanged();
-      });
-    }
 
     const addEntityButton = this.shadowRoot.getElementById("add-entity");
     if (addEntityButton) {
@@ -611,13 +501,6 @@ class KodiModularControlCardEditor extends HTMLElement {
       if (entitySelect) {
         entitySelect.addEventListener("change", (ev) => {
           this._updateEntityBlock(blockIndex, { entity: ev.target.value });
-        });
-      }
-
-      const titleField = section.querySelector("input[data-field='title']");
-      if (titleField) {
-        titleField.addEventListener("input", (ev) => {
-          this._updateEntityBlock(blockIndex, { title: ev.target.value });
         });
       }
 
@@ -664,19 +547,14 @@ class KodiModularControlCardEditor extends HTMLElement {
         });
       }
 
-      const iconSearchInput = row.querySelector("input[data-field='icon-search']");
-      if (iconSearchInput) {
-        iconSearchInput.addEventListener("input", (ev) => {
-          this._iconSearch = ev.target.value;
-          this._render();
-        });
-      }
-
-      const iconSelect = row.querySelector("select[data-field='module-icon']");
-      if (iconSelect) {
-        iconSelect.addEventListener("change", (ev) => {
-          this._updateModule(blockIndex, moduleIndex, { icon: ev.target.value });
-        });
+      const iconPicker = row.querySelector("ha-icon-picker[data-field='module-icon']");
+      if (iconPicker) {
+        const onIconChanged = (ev) => {
+          const nextIcon = (ev && ev.detail && ev.detail.value) || ev.target.value || "mdi:kodi";
+          this._updateModule(blockIndex, moduleIndex, { icon: nextIcon });
+        };
+        iconPicker.addEventListener("value-changed", onIconChanged);
+        iconPicker.addEventListener("change", onIconChanged);
       }
 
       const paramsField = row.querySelector("textarea[data-field='module-params']");
@@ -724,9 +602,13 @@ class KodiModularControlCardEditor extends HTMLElement {
   }
 
   _notifyConfigChanged() {
+    const sanitizedEntities = (this._config.entities || []).map((entry) => ({
+      entity: entry.entity || "",
+      modules: Array.isArray(entry.modules) ? entry.modules : []
+    }));
     const nextConfig = {
-      ...this._config,
-      type: this._config.type || `custom:${CARD_NAME}`
+      type: this._config.type || `custom:${CARD_NAME}`,
+      entities: sanitizedEntities
     };
     this.dispatchEvent(
       new CustomEvent("config-changed", {

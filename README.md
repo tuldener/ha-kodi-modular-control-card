@@ -14,7 +14,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
   - `VideoLibrary`
   - `Player`
 - Auswahl der Kontrollfunktion per Dropdown
-- Icon-Auswahl mit Suchfeld und Vorschau
+- Icon-Auswahl über Home-Assistant Standard `ha-icon-picker` (Suche + Dropdown + Vorschau kombiniert)
 - Optionale JSON-Parameter pro Modul (z.B. `playerid`, `limits`)
 
 ## Installation (HACS Custom Repository)
@@ -32,10 +32,8 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
 
 ```yaml
 type: custom:ha-kodi-modular-control-card
-title: Kodi Steuerung
 entities:
   - entity: media_player.kodi_wohnzimmer
-    title: Wohnzimmer
     modules:
       - key: player_playpause
         icon: mdi:play-pause
@@ -45,7 +43,6 @@ entities:
         icon: mdi:folder-refresh
         params: {}
   - entity: media_player.kodi_schlafzimmer
-    title: Schlafzimmer
     modules:
       - key: player_stop
         icon: mdi:stop
