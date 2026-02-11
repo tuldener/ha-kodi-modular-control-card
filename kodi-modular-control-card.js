@@ -1,6 +1,6 @@
 const CARD_NAME = "ha-kodi-modular-control-card";
 const CARD_EDITOR_NAME = "ha-kodi-modular-control-card-editor";
-const CARD_VERSION = "2026.02.11.1";
+const CARD_VERSION = "2026.02.11.2";
 
 const CONTROL_DEFINITIONS = [
   {
