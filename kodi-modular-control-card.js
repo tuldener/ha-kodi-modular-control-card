@@ -417,47 +417,90 @@ class KodiModularControlCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          --kodi-bubble-bg-a: color-mix(in srgb, var(--card-background-color) 86%, #061520 14%);
+          --kodi-bubble-bg-b: color-mix(in srgb, var(--card-background-color) 78%, var(--primary-color) 22%);
+          --kodi-bubble-outline: color-mix(in srgb, var(--divider-color) 65%, var(--primary-color) 35%);
+          --kodi-bubble-btn: color-mix(in srgb, var(--card-background-color) 72%, #00bcd4 28%);
+          --kodi-bubble-btn-hover: color-mix(in srgb, var(--card-background-color) 54%, #00bcd4 46%);
+        }
+
+        ha-card {
+          border: 0;
+          box-shadow: none;
+          background: transparent;
         }
 
         .wrapper {
           display: grid;
-          gap: 12px;
-          padding: 12px;
+          gap: 14px;
+          padding: 10px;
         }
 
         .entity-block {
-          border-radius: 12px;
-          border: 1px solid var(--divider-color);
+          border-radius: 26px;
+          border: 1px solid var(--kodi-bubble-outline);
           background: linear-gradient(
-            135deg,
-            color-mix(in srgb, var(--card-background-color) 90%, black 10%),
-            color-mix(in srgb, var(--card-background-color) 96%, var(--primary-color) 4%)
+            160deg,
+            var(--kodi-bubble-bg-a),
+            var(--kodi-bubble-bg-b)
           );
-          padding: 12px;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 16px 34px rgba(0, 0, 0, 0.24);
+          padding: 18px 16px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .entity-block::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(120px 40px at 20% -10%, rgba(255, 255, 255, 0.12), transparent 70%),
+            radial-gradient(120px 40px at 80% 110%, rgba(0, 188, 212, 0.11), transparent 70%);
+          pointer-events: none;
         }
 
         .controls {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
-          gap: 8px;
+          grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+          gap: 12px;
+          align-items: center;
         }
 
         .control {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: none;
-          border-radius: 10px;
-          min-height: 42px;
+          border: 1px solid color-mix(in srgb, #00bcd4 42%, var(--divider-color) 58%);
+          border-radius: 18px;
+          min-height: 54px;
+          min-width: 54px;
           cursor: pointer;
           color: var(--primary-text-color);
-          background: color-mix(in srgb, var(--card-background-color) 88%, var(--primary-color) 12%);
-          transition: transform 120ms ease, background-color 120ms ease;
+          background: linear-gradient(
+            165deg,
+            var(--kodi-bubble-btn),
+            color-mix(in srgb, var(--kodi-bubble-btn) 70%, #05141d 30%)
+          );
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.09),
+            0 8px 18px rgba(0, 0, 0, 0.22);
+          transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+          backdrop-filter: blur(2px);
         }
 
         .control:hover {
-          transform: translateY(-1px);
-          background: color-mix(in srgb, var(--card-background-color) 72%, var(--primary-color) 28%);
+          transform: translateY(-2px);
+          background: linear-gradient(
+            165deg,
+            var(--kodi-bubble-btn-hover),
+            color-mix(in srgb, var(--kodi-bubble-btn-hover) 74%, #05141d 26%)
+          );
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.16),
+            0 11px 24px rgba(0, 0, 0, 0.28);
         }
 
         .control[disabled] {
@@ -486,9 +529,35 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .empty {
-          padding: 6px 2px;
+          padding: 8px 4px;
           color: var(--secondary-text-color);
           font-size: 14px;
+        }
+
+        ha-icon {
+          --mdc-icon-size: 26px;
+        }
+
+        @media (max-width: 600px) {
+          .entity-block {
+            padding: 14px 12px;
+            border-radius: 22px;
+          }
+
+          .controls {
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 10px;
+          }
+
+          .control {
+            min-height: 48px;
+            min-width: 48px;
+            border-radius: 15px;
+          }
+
+          ha-icon {
+            --mdc-icon-size: 23px;
+          }
         }
 
       </style>
