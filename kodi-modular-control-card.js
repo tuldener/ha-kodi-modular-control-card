@@ -462,7 +462,7 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.state-on ha-icon {
-          color: rgba(255, 255, 255, 0.96);
+          color: rgba(80, 220, 120, 0.98);
         }
 
         .control.state-off ha-icon {
@@ -474,11 +474,11 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.state-repeat-one ha-icon {
-          color: rgba(120, 190, 255, 0.96);
+          color: rgba(255, 170, 70, 0.98);
         }
 
         .control.state-repeat-all ha-icon {
-          color: rgba(255, 255, 255, 0.96);
+          color: rgba(80, 220, 120, 0.98);
         }
 
         .empty {
@@ -760,7 +760,7 @@ class KodiModularControlCard extends HTMLElement {
 
     if (isRepeatKey) {
       const raw = params && typeof params.repeat !== "undefined" ? params.repeat : "cycle";
-      const repeatModes = ["off", "one", "all"];
+      const repeatModes = ["off", "all", "one"];
       if (raw === "cycle") {
         const currentMode = current.repeatMode && repeatModes.includes(current.repeatMode)
           ? current.repeatMode
