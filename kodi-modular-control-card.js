@@ -664,22 +664,18 @@ class KodiModularControlCard extends HTMLElement {
   async _refreshToggleStateFromKodi(entityId) {
     if (!this._hass || !entityId) return;
     try {
-      const active = await this._hass.callService("kodi", "call_method", {
-        entity_id: entityId,
-        method: "Player.GetActivePlayers"
-      }, true);
-      const players = active && active.result ? active.result : [];
+      const active = await this._callKodiMethodWithResponse(entityId, "Player.GetActivePlayers", {});
+      const players = this._extractKodiResult(active);
       if (!Array.isArray(players) || players.length === 0) return;
       const playerId = players[0] && typeof players[0].playerid !== "undefined" ? players[0].playerid : undefined;
       if (typeof playerId === "undefined") return;
 
-      const props = await this._hass.callService("kodi", "call_method", {
-        entity_id: entityId,
-        method: "Player.GetProperties",
+      const props = await this._callKodiMethodWithResponse(entityId, "Player.GetProperties", {
         playerid: playerId,
         properties: ["repeat", "shuffled"]
-      }, true);
-      const result = props && props.result ? props.result : {};
+      });
+      const result = this._extractKodiResult(props);
+      if (!result || typeof result !== "object") return;
       const current = { ...(this._toggleStateCache[entityId] || {}) };
 
       if (typeof result.shuffled === "boolean") {
@@ -695,6 +691,46 @@ class KodiModularControlCard extends HTMLElement {
       // eslint-disable-next-line no-console
       console.debug("Kodi toggle refresh failed", entityId, err);
     }
+  }
+
+  async _callKodiMethodWithResponse(entityId, method, params) {
+    const serviceData = {
+      entity_id: entityId,
+      method,
+      ...(params || {})
+    };
+
+    if (this._hass && this._hass.callApi) {
+      try {
+        return await this._hass.callApi(
+          "POST",
+          "services/kodi/call_method?return_response",
+          serviceData
+        );
+      } catch (err) {
+        // Fallback without response payload support.
+      }
+    }
+
+    await this._hass.callService("kodi", "call_method", serviceData);
+    return null;
+  }
+
+  _extractKodiResult(response) {
+    if (!response) return null;
+    if (response && typeof response.result !== "undefined") {
+      return response.result;
+    }
+    if (Array.isArray(response) && response.length > 0) {
+      const first = response[0];
+      if (first && first.service_response && typeof first.service_response.result !== "undefined") {
+        return first.service_response.result;
+      }
+      if (first && typeof first.result !== "undefined") {
+        return first.result;
+      }
+    }
+    return null;
   }
 
   _readShuffleStateFromEntity(entityId) {
