@@ -23,6 +23,14 @@ const PLAYER_METHODS_REQUIRING_ID = new Set([
   "Player.Zoom"
 ]);
 
+const QUERY_METHODS_WITH_RESULT = new Set([
+  "Player.GetActivePlayers",
+  "Player.GetItem",
+  "Player.GetPlayers",
+  "Player.GetProperties",
+  "Player.GetViewMode"
+]);
+
 const CONTROL_DEFINITIONS = [
   {
     key: "audio_scan",
@@ -811,6 +819,12 @@ class KodiModularControlCard extends HTMLElement {
           delete serviceData.service_data;
         }
         responsePayload = await this._callServiceWithOptionalResponse(domain, service, serviceData);
+      } else if (QUERY_METHODS_WITH_RESULT.has(definition.method)) {
+        responsePayload = await this._callKodiMethodWithResponse(entityId, definition.method, mergedParams);
+        const extracted = this._extractKodiResult(responsePayload);
+        if (typeof extracted !== "undefined" && extracted !== null) {
+          responsePayload = extracted;
+        }
       } else {
         responsePayload = await this._callServiceWithOptionalResponse("kodi", "call_method", payload);
       }
