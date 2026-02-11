@@ -417,13 +417,13 @@ class KodiModularControlCard extends HTMLElement {
       <style>
         :host {
           display: block;
-          --bubble-main-background-color: var(--bubble-media-player-main-background-color, var(--bubble-main-background-color, #252525));
-          --bubble-secondary-background-color: var(--bubble-media-player-icon-background-color, var(--bubble-secondary-background-color, #1f1f1f));
-          --bubble-border-radius: var(--bubble-media-player-border-radius, var(--bubble-border-radius, 999px));
+          --bubble-main-background-color: #252525;
+          --bubble-secondary-background-color: #1f1f1f;
+          --bubble-border-radius: 30px;
           --bubble-button-radius: var(--bubble-media-player-buttons-border-radius, 999px);
           --bubble-icon-radius: var(--bubble-media-player-icon-border-radius, 999px);
-          --bubble-box-shadow: var(--bubble-media-player-box-shadow, var(--bubble-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.2)));
-          --bubble-accent-color: var(--bubble-accent-color, #1f97f3);
+          --bubble-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+          --bubble-accent-color: #1f97f3;
         }
 
         ha-card {
@@ -444,11 +444,11 @@ class KodiModularControlCard extends HTMLElement {
           border: none;
           background: var(--bubble-main-background-color);
           box-shadow: var(--bubble-box-shadow);
-          min-height: 98px;
+          min-height: 92px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 10px;
+          gap: 12px;
           padding: 8px 12px 8px 8px;
         }
 
@@ -461,8 +461,8 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .bubble-icon-wrap {
-          height: 68px;
-          width: 68px;
+          height: 62px;
+          width: 62px;
           border-radius: 999px;
           background: var(--bubble-secondary-background-color);
           display: inline-flex;
@@ -472,15 +472,15 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .bubble-icon-wrap ha-icon {
-          --mdc-icon-size: 36px;
+          --mdc-icon-size: 34px;
           color: var(--bubble-accent-color);
         }
 
         .bubble-title {
           color: var(--primary-text-color);
-          font-size: 44px;
-          line-height: 1;
-          font-weight: 600;
+          font-size: 40px;
+          line-height: 1.05;
+          font-weight: 700;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -489,7 +489,7 @@ class KodiModularControlCard extends HTMLElement {
         .controls {
           display: flex;
           flex-wrap: nowrap;
-          gap: 8px;
+          gap: 6px;
           justify-content: flex-end;
           align-items: center;
           flex: 0 0 auto;
@@ -501,8 +501,8 @@ class KodiModularControlCard extends HTMLElement {
           justify-content: center;
           border: 0;
           border-radius: var(--bubble-icon-radius);
-          height: 52px;
-          width: 52px;
+          height: 50px;
+          width: 50px;
           cursor: pointer;
           color: var(--primary-text-color);
           background: transparent;
@@ -516,8 +516,8 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.is-primary {
-          height: 86px;
-          width: 86px;
+          height: 84px;
+          width: 84px;
           background: var(--bubble-accent-color);
           color: #fff;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
@@ -559,7 +559,7 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         ha-icon {
-          --mdc-icon-size: 34px;
+          --mdc-icon-size: 32px;
         }
 
         @media (max-width: 600px) {
@@ -584,7 +584,7 @@ class KodiModularControlCard extends HTMLElement {
           }
 
           .bubble-title {
-            font-size: 24px;
+            font-size: 22px;
           }
 
           .controls {
