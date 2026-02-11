@@ -336,10 +336,12 @@ class KodiModularControlCard extends HTMLElement {
     this._busy = false;
     this._toggleStateCache = {};
     this._stateRefreshTimer = null;
+    this._statusRefreshInFlight = false;
   }
 
   connectedCallback() {
     this._startStateRefreshTimer();
+    this._refreshToggleStateCacheFromKodi();
   }
 
   disconnectedCallback() {
@@ -352,12 +354,14 @@ class KodiModularControlCard extends HTMLElement {
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._syncToggleStateCacheFromEntityAttributes();
+    this._refreshToggleStateCacheFromKodi();
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
     this._syncToggleStateCacheFromEntityAttributes();
+    this._refreshToggleStateCacheFromKodi();
     this._render();
   }
 
@@ -569,10 +573,9 @@ class KodiModularControlCard extends HTMLElement {
       console.error(`Kodi control failed (${definition.label})`, err);
     } finally {
       this._busy = false;
-      // Immediate follow-up sync after action.
+      // Immediate follow-up sync after action using Kodi response path.
       setTimeout(() => {
-        this._syncToggleStateCacheFromEntityAttributes();
-        this._render();
+        this._refreshToggleStateFromKodi(entityId);
       }, 1000);
       this._render();
     }
@@ -615,6 +618,7 @@ class KodiModularControlCard extends HTMLElement {
     this._stopStateRefreshTimer();
     this._stateRefreshTimer = setInterval(() => {
       this._syncToggleStateCacheFromEntityAttributes();
+      this._refreshToggleStateCacheFromKodi();
       this._render();
     }, 60000);
   }
@@ -647,6 +651,81 @@ class KodiModularControlCard extends HTMLElement {
       }
       this._toggleStateCache[entityId] = next;
     });
+  }
+
+  async _refreshToggleStateCacheFromKodi() {
+    if (!this._hass || this._statusRefreshInFlight) return;
+    this._statusRefreshInFlight = true;
+    try {
+      const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+      for (const block of entities) {
+        const entityId = block && block.entity ? block.entity : "";
+        if (!entityId) continue;
+        // eslint-disable-next-line no-await-in-loop
+        await this._refreshToggleStateFromKodi(entityId);
+      }
+    } finally {
+      this._statusRefreshInFlight = false;
+      this._render();
+    }
+  }
+
+  async _refreshToggleStateFromKodi(entityId) {
+    if (!this._hass || !entityId) return;
+    const activeResp = await this._callKodiMethodWithResponse(entityId, "Player.GetActivePlayers", {});
+    const activePlayers = this._extractKodiResult(activeResp);
+    if (!Array.isArray(activePlayers) || activePlayers.length === 0) return;
+    const playerId = activePlayers[0] && typeof activePlayers[0].playerid !== "undefined"
+      ? activePlayers[0].playerid
+      : undefined;
+    if (typeof playerId === "undefined") return;
+
+    const propsResp = await this._callKodiMethodWithResponse(entityId, "Player.GetProperties", {
+      playerid: playerId,
+      properties: ["repeat", "shuffled"]
+    });
+    const props = this._extractKodiResult(propsResp);
+    if (!props || typeof props !== "object") return;
+
+    const current = { ...(this._toggleStateCache[entityId] || {}) };
+    if (typeof props.shuffled === "boolean") {
+      current.shuffleOn = props.shuffled;
+    }
+    if (typeof props.repeat === "string") {
+      const mode = props.repeat.toLowerCase();
+      current.repeatMode = mode;
+      current.repeatOn = !["off", "none", "false", "0"].includes(mode);
+    }
+    this._toggleStateCache[entityId] = current;
+  }
+
+  async _callKodiMethodWithResponse(entityId, method, params) {
+    if (!this._hass || !this._hass.callApi) return null;
+    try {
+      return await this._hass.callApi("POST", "services/kodi/call_method?return_response", {
+        entity_id: entityId,
+        method,
+        ...(params || {})
+      });
+    } catch (err) {
+      return null;
+    }
+  }
+
+  _extractKodiResult(response) {
+    if (!response) return null;
+    if (typeof response.result !== "undefined") return response.result;
+    if (response.service_response && typeof response.service_response.result !== "undefined") {
+      return response.service_response.result;
+    }
+    if (Array.isArray(response) && response.length > 0) {
+      const first = response[0];
+      if (first && typeof first.result !== "undefined") return first.result;
+      if (first && first.service_response && typeof first.service_response.result !== "undefined") {
+        return first.service_response.result;
+      }
+    }
+    return null;
   }
 
   _readShuffleStateFromEntity(entityId) {
