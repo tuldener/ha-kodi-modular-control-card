@@ -232,6 +232,14 @@ class KodiModularControlCard extends HTMLElement {
           opacity: 0.5;
         }
 
+        .control.state-on ha-icon {
+          color: rgba(255, 255, 255, 0.96);
+        }
+
+        .control.state-off ha-icon {
+          color: rgba(150, 150, 150, 0.9);
+        }
+
         .empty {
           padding: 6px 2px;
           color: var(--secondary-text-color);
@@ -259,8 +267,9 @@ class KodiModularControlCard extends HTMLElement {
           .map((module) => {
             const definition = CONTROL_DEFINITIONS.find((item) => item.key === module.key);
             if (!definition) return "";
+            const stateClass = this._getToggleStateClass(entityId, module.key);
             return `
-              <button class="control" data-entity="${this._escapeHtml(entityId)}" data-module="${this._escapeHtml(module.key)}" title="${this._escapeHtml(definition.label)}" ${this._busy ? "disabled" : ""}>
+              <button class="control ${stateClass}" data-entity="${this._escapeHtml(entityId)}" data-module="${this._escapeHtml(module.key)}" title="${this._escapeHtml(definition.label)}" ${this._busy ? "disabled" : ""}>
                 <ha-icon icon="${this._escapeHtml(module.icon || definition.defaultIcon)}"></ha-icon>
               </button>
             `;
@@ -306,6 +315,33 @@ class KodiModularControlCard extends HTMLElement {
       this._busy = false;
       this._render();
     }
+  }
+
+  _getToggleStateClass(entityId, moduleKey) {
+    if (moduleKey !== "player_shuffle" && moduleKey !== "player_repeat") {
+      return "";
+    }
+    const hassStates = this._hass && this._hass.states ? this._hass.states : {};
+    const stateObj = hassStates[entityId];
+    const attrs = stateObj && stateObj.attributes ? stateObj.attributes : {};
+
+    if (moduleKey === "player_shuffle") {
+      const value = attrs.shuffle;
+      if (typeof value === "boolean") return value ? "state-on" : "state-off";
+      if (typeof value === "string") {
+        const normalized = value.toLowerCase();
+        return ["off", "false", "none", "0"].includes(normalized) ? "state-off" : "state-on";
+      }
+      return "state-off";
+    }
+
+    const repeat = attrs.repeat;
+    if (typeof repeat === "boolean") return repeat ? "state-on" : "state-off";
+    if (typeof repeat === "string") {
+      const normalized = repeat.toLowerCase();
+      return ["off", "false", "none", "0"].includes(normalized) ? "state-off" : "state-on";
+    }
+    return "state-off";
   }
 
   _escapeHtml(value) {
