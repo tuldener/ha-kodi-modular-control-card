@@ -419,56 +419,38 @@ class KodiModularControlCard extends HTMLElement {
           display: block;
           --bubble-main-background-color: var(--bubble-media-player-main-background-color, var(--bubble-main-background-color, #252525));
           --bubble-secondary-background-color: var(--bubble-media-player-icon-background-color, var(--bubble-secondary-background-color, #1f1f1f));
-          --bubble-border-radius: var(--bubble-media-player-border-radius, var(--bubble-border-radius, 30px));
+          --bubble-border-radius: var(--bubble-media-player-border-radius, var(--bubble-border-radius, 28px));
           --bubble-button-radius: var(--bubble-media-player-buttons-border-radius, 999px);
           --bubble-icon-radius: var(--bubble-media-player-icon-border-radius, 999px);
+          --bubble-box-shadow: var(--bubble-media-player-box-shadow, var(--bubble-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.2)));
           --bubble-accent-color: var(--bubble-accent-color, #1f97f3);
         }
 
         ha-card {
-          border: 0;
+          border: none;
+          border-radius: 0;
           box-shadow: none;
           background: transparent;
         }
 
         .wrapper {
           display: grid;
-          gap: 12px;
-          padding: 6px 4px;
+          gap: 10px;
+          padding: 4px 2px;
         }
 
         .entity-block {
           border-radius: var(--bubble-border-radius);
-          border: 1px solid color-mix(in srgb, var(--divider-color) 78%, transparent 22%);
-          background: linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--bubble-main-background-color) 95%, black 5%),
-            color-mix(in srgb, var(--bubble-secondary-background-color) 88%, black 12%)
-          );
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 6px 14px rgba(0, 0, 0, 0.22);
-          padding: 12px 14px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .entity-block::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(
-            140px 50px at 18% -8%,
-            rgba(255, 255, 255, 0.08),
-            transparent 72%
-          );
-          pointer-events: none;
+          border: none;
+          background: var(--bubble-main-background-color);
+          box-shadow: var(--bubble-box-shadow);
+          padding: 8px 10px;
         }
 
         .controls {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 6px;
           justify-content: flex-start;
           align-items: center;
         }
@@ -479,10 +461,10 @@ class KodiModularControlCard extends HTMLElement {
           justify-content: center;
           border: 0;
           border-radius: var(--bubble-icon-radius);
-          height: 44px;
-          width: 44px;
+          height: 46px;
+          width: 46px;
           cursor: pointer;
-          color: color-mix(in srgb, var(--primary-text-color) 92%, white 8%);
+          color: var(--primary-text-color);
           background: transparent;
           box-shadow: none;
           transition: transform 120ms ease, background-color 120ms ease, color 120ms ease;
@@ -490,7 +472,7 @@ class KodiModularControlCard extends HTMLElement {
 
         .control:hover {
           transform: translateY(-1px);
-          background: color-mix(in srgb, var(--bubble-secondary-background-color) 72%, white 28%);
+          background: color-mix(in srgb, var(--bubble-secondary-background-color) 85%, transparent 15%);
         }
 
         .control.is-primary {
@@ -537,31 +519,31 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         ha-icon {
-          --mdc-icon-size: 26px;
+          --mdc-icon-size: 30px;
         }
 
         @media (max-width: 600px) {
           .entity-block {
-            padding: 10px 12px;
-            border-radius: 24px;
+            padding: 7px 8px;
+            border-radius: var(--bubble-border-radius);
           }
 
           .controls {
-            gap: 8px;
+            gap: 4px;
           }
 
           .control {
-            height: 40px;
-            width: 40px;
+            height: 42px;
+            width: 42px;
           }
 
           .control.is-primary {
-            height: 54px;
-            width: 54px;
+            height: 56px;
+            width: 56px;
           }
 
           ha-icon {
-            --mdc-icon-size: 23px;
+            --mdc-icon-size: 26px;
           }
         }
 
