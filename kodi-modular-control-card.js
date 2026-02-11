@@ -115,10 +115,10 @@ const CONTROL_DEFINITIONS = [
   {
     key: "player_repeat",
     category: "Player",
-    label: "Player.SetRepeat (cycle)",
+    label: "Player.SetRepeat (all/off)",
     method: "Player.SetRepeat",
     defaultIcon: "mdi:repeat",
-    defaultParams: { playerid: 1, repeat: "cycle" }
+    defaultParams: { playerid: 1, repeat: "all" }
   },
   {
     key: "player_add_subtitle",
@@ -227,10 +227,10 @@ const CONTROL_DEFINITIONS = [
   {
     key: "player_set_repeat",
     category: "Player",
-    label: "Player.SetRepeat",
+    label: "Player.SetRepeat (all/off)",
     method: "Player.SetRepeat",
     defaultIcon: "mdi:repeat",
-    defaultParams: { playerid: 1, repeat: "cycle" }
+    defaultParams: { playerid: 1, repeat: "all" }
   },
   {
     key: "player_set_shuffle",
@@ -778,6 +778,9 @@ class KodiModularControlCard extends HTMLElement {
       ...(definition.defaultParams || {}),
       ...(module.params || {})
     };
+    if (definition.method === "Player.SetRepeat") {
+      mergedParams.repeat = this._resolveRepeatCommandValue(entityId, mergedParams.repeat);
+    }
     if (definition.method !== "__ha_service__" && PLAYER_METHODS_REQUIRING_ID.has(definition.method)) {
       const resolvedPlayerId = this._resolvePlayerId(entityId, mergedParams);
       if (typeof resolvedPlayerId !== "undefined") {
@@ -845,10 +848,6 @@ class KodiModularControlCard extends HTMLElement {
       return cache.shuffleOn ? "state-on" : "state-off";
     }
     if (isRepeatKey && typeof cache.repeatOn === "boolean") {
-      const repeatMode = (cache.repeatMode || "").toLowerCase();
-      if (repeatMode === "one") return "state-repeat-one";
-      if (repeatMode === "all") return "state-repeat-all";
-      if (repeatMode === "off" || repeatMode === "none") return "state-repeat-off";
       return cache.repeatOn ? "state-repeat-all" : "state-repeat-off";
     }
 
@@ -859,10 +858,9 @@ class KodiModularControlCard extends HTMLElement {
     }
 
     const repeatMode = this._readRepeatModeFromEntity(entityId);
-    if (repeatMode === "one") return "state-repeat-one";
     if (repeatMode === "all") return "state-repeat-all";
     if (repeatMode === "off" || repeatMode === "none") return "state-repeat-off";
-    return "state-repeat-off";
+    return repeatMode ? "state-repeat-all" : "state-repeat-off";
   }
 
   _startStateRefreshTimer() {
@@ -939,30 +937,42 @@ class KodiModularControlCard extends HTMLElement {
     if (!this._hass || !entityId) return;
     const activeResp = await this._callKodiMethodWithResponse(entityId, "Player.GetActivePlayers", {});
     const activePlayers = this._extractKodiResult(activeResp);
-    if (!Array.isArray(activePlayers) || activePlayers.length === 0) return;
-    const playerId = activePlayers[0] && typeof activePlayers[0].playerid !== "undefined"
-      ? activePlayers[0].playerid
-      : undefined;
-    if (typeof playerId === "undefined") return;
+    const activePlayerIds = Array.isArray(activePlayers)
+      ? activePlayers
+          .map((item) => (item && typeof item.playerid !== "undefined" ? item.playerid : undefined))
+          .filter((item) => typeof item !== "undefined")
+      : [];
+    const fallbackPlayerIds = this._collectConfiguredPlayerIds(entityId);
+    const candidatePlayerIds = activePlayerIds.length
+      ? activePlayerIds
+      : (fallbackPlayerIds.length ? fallbackPlayerIds : [0, 1, 2]);
 
-    const propsResp = await this._callKodiMethodWithResponse(entityId, "Player.GetProperties", {
-      playerid: playerId,
-      properties: ["repeat", "shuffled"]
-    });
-    const props = this._extractKodiResult(propsResp);
-    if (!props || typeof props !== "object") return;
+    for (const playerId of candidatePlayerIds) {
+      // eslint-disable-next-line no-await-in-loop
+      const propsResp = await this._callKodiMethodWithResponse(entityId, "Player.GetProperties", {
+        playerid: playerId,
+        properties: ["shuffled", "repeat"]
+      });
+      const props = this._extractKodiResult(propsResp);
+      if (!props || typeof props !== "object") continue;
 
-    const current = { ...(this._toggleStateCache[entityId] || {}) };
-    current.playerId = playerId;
-    if (typeof props.shuffled === "boolean") {
-      current.shuffleOn = props.shuffled;
+      const hasShuffle = typeof props.shuffled === "boolean";
+      const hasRepeat = typeof props.repeat === "string";
+      if (!hasShuffle && !hasRepeat) continue;
+
+      const current = { ...(this._toggleStateCache[entityId] || {}) };
+      current.playerId = playerId;
+      if (hasShuffle) {
+        current.shuffleOn = props.shuffled;
+      }
+      if (hasRepeat) {
+        const mode = props.repeat.toLowerCase();
+        current.repeatMode = mode;
+        current.repeatOn = !["off", "none", "false", "0"].includes(mode);
+      }
+      this._toggleStateCache[entityId] = current;
+      return;
     }
-    if (typeof props.repeat === "string") {
-      const mode = props.repeat.toLowerCase();
-      current.repeatMode = mode;
-      current.repeatOn = !["off", "none", "false", "0"].includes(mode);
-    }
-    this._toggleStateCache[entityId] = current;
   }
 
   async _callKodiMethodWithResponse(entityId, method, params) {
@@ -1087,6 +1097,32 @@ class KodiModularControlCard extends HTMLElement {
     return undefined;
   }
 
+  _collectConfiguredPlayerIds(entityId) {
+    const ids = [];
+    const cache = this._toggleStateCache[entityId] || {};
+    if (typeof cache.playerId !== "undefined" && cache.playerId !== null) {
+      ids.push(cache.playerId);
+    }
+
+    const block = (this._config.entities || []).find((item) => item.entity === entityId);
+    const modules = block && Array.isArray(block.modules) ? block.modules : [];
+    modules.forEach((module) => {
+      const definition = CONTROL_DEFINITIONS.find((item) => item.key === module.key);
+      const mergedParams = {
+        ...((definition && definition.defaultParams) || {}),
+        ...((module && module.params) || {})
+      };
+      if (typeof mergedParams.playerid !== "undefined" && mergedParams.playerid !== null) {
+        ids.push(mergedParams.playerid);
+      }
+    });
+
+    const normalized = ids
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+    return [...new Set(normalized)];
+  }
+
   _getNowPlayingTitle(entityId) {
     const attrs = this._getEntityAttributes(entityId);
     const mediaTitle =
@@ -1097,6 +1133,25 @@ class KodiModularControlCard extends HTMLElement {
     if (mediaTitle) return mediaTitle;
     if (attrs.friendly_name) return attrs.friendly_name;
     return entityId || "Kodi";
+  }
+
+  _resolveRepeatCommandValue(entityId, rawValue) {
+    if (typeof rawValue === "string") {
+      const normalized = rawValue.toLowerCase();
+      if (normalized === "all" || normalized === "off") return normalized;
+    }
+    if (typeof rawValue === "boolean") return rawValue ? "all" : "off";
+
+    const cache = this._toggleStateCache[entityId] || {};
+    if (typeof cache.repeatOn === "boolean") {
+      return cache.repeatOn ? "off" : "all";
+    }
+
+    const currentMode = this._readRepeatModeFromEntity(entityId);
+    if (currentMode && !["off", "none", "false", "0"].includes(currentMode)) {
+      return "off";
+    }
+    return "all";
   }
 
   _addDebugEntry(entry) {
@@ -1144,16 +1199,10 @@ class KodiModularControlCard extends HTMLElement {
     }
 
     if (isRepeatKey) {
-      const raw = params && typeof params.repeat !== "undefined" ? params.repeat : "cycle";
-      const repeatModes = ["off", "all", "one"];
-      if (raw === "cycle") {
-        const currentMode = current.repeatMode && repeatModes.includes(current.repeatMode)
-          ? current.repeatMode
-          : "off";
-        const nextIndex = (repeatModes.indexOf(currentMode) + 1) % repeatModes.length;
-        current.repeatMode = repeatModes[nextIndex];
-      } else if (typeof raw === "string") {
-        current.repeatMode = raw.toLowerCase();
+      const raw = params && typeof params.repeat !== "undefined" ? params.repeat : "all";
+      if (typeof raw === "string") {
+        const normalized = raw.toLowerCase();
+        current.repeatMode = normalized === "off" ? "off" : "all";
       } else if (typeof raw === "boolean") {
         current.repeatMode = raw ? "all" : "off";
       }
