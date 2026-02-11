@@ -1,5 +1,6 @@
 const CARD_NAME = "ha-kodi-modular-control-card";
 const CARD_EDITOR_NAME = "ha-kodi-modular-control-card-editor";
+const CARD_VERSION = "2026.02.11.1";
 
 const CONTROL_DEFINITIONS = [
   {
@@ -714,17 +715,47 @@ class KodiModularControlCard extends HTMLElement {
 
   _extractKodiResult(response) {
     if (!response) return null;
-    if (typeof response.result !== "undefined") return response.result;
-    if (response.service_response && typeof response.service_response.result !== "undefined") {
-      return response.service_response.result;
+
+    if (typeof response.result !== "undefined") {
+      const nested = response.result;
+      if (nested && typeof nested === "object" && typeof nested.result !== "undefined") {
+        return nested.result;
+      }
+      return nested;
     }
-    if (Array.isArray(response) && response.length > 0) {
-      const first = response[0];
-      if (first && typeof first.result !== "undefined") return first.result;
-      if (first && first.service_response && typeof first.service_response.result !== "undefined") {
-        return first.service_response.result;
+
+    if (response.service_response) {
+      const sr = response.service_response;
+      if (typeof sr.result !== "undefined") return sr.result;
+      if (sr && typeof sr === "object") {
+        const keys = Object.keys(sr);
+        for (const key of keys) {
+          const item = sr[key];
+          if (item && typeof item.result !== "undefined") return item.result;
+          if (item && item.service_response && typeof item.service_response.result !== "undefined") {
+            return item.service_response.result;
+          }
+        }
       }
     }
+
+    if (Array.isArray(response) && response.length > 0) {
+      for (const item of response) {
+        const extracted = this._extractKodiResult(item);
+        if (typeof extracted !== "undefined" && extracted !== null) return extracted;
+      }
+    }
+
+    if (response && typeof response === "object") {
+      for (const key of Object.keys(response)) {
+        const value = response[key];
+        if (value && typeof value === "object") {
+          const extracted = this._extractKodiResult(value);
+          if (typeof extracted !== "undefined" && extracted !== null) return extracted;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -1142,8 +1173,12 @@ window.customCards = window.customCards || [];
 if (!window.customCards.find((card) => card.type === CARD_NAME)) {
   window.customCards.push({
     type: CARD_NAME,
-    name: "Kodi Modular Control Card",
+    name: `Kodi Modular Control Card (${CARD_VERSION})`,
     description:
       "Modulare Kodi-Steuerkarte mit JSON-RPC (AudioLibrary, VideoLibrary, Player), Multi-Instanz und Icon-Auswahl."
   });
 }
+
+// Helps verify which JS bundle Home Assistant actually loaded.
+// eslint-disable-next-line no-console
+console.info(`[${CARD_NAME}] loaded version ${CARD_VERSION}`);
