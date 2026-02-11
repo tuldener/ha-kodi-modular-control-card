@@ -9,6 +9,8 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
 
 - Multi-Instanz Support: mehrere `media_player.kodi_*` Entitäten in einer Karte
 - Modulare Kontrollfelder je Kodi-Instanz
+- Anzeige des aktuell gespielten Titels statt statischem Entity-Namen
+- Größenmodus `normal` oder `large`
 - Kategorien:
   - `AudioLibrary`
   - `VideoLibrary`
@@ -33,6 +35,7 @@ Die Karte orientiert sich visuell an der Basis-Integration von Kodi in Home Assi
 
 ```yaml
 type: custom:ha-kodi-modular-control-card
+size: normal
 entities:
   - entity: media_player.kodi_wohnzimmer
     modules:

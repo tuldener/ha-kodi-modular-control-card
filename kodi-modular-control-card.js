@@ -338,20 +338,24 @@ class KodiModularControlCard extends HTMLElement {
     this._toggleStateCache = {};
     this._stateRefreshTimer = null;
     this._statusRefreshInFlight = false;
+    this._titleRefreshTimer = null;
   }
 
   connectedCallback() {
     this._startStateRefreshTimer();
+    this._startTitleRefreshTimer();
     this._refreshToggleStateCacheFromKodi();
   }
 
   disconnectedCallback() {
     this._stopStateRefreshTimer();
+    this._stopTitleRefreshTimer();
   }
 
   setConfig(config) {
     const entities = Array.isArray(config.entities) ? config.entities : [];
     this._config = {
+      size: this._normalizeSize(config.size),
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._syncToggleStateCacheFromEntityAttributes();
@@ -369,6 +373,7 @@ class KodiModularControlCard extends HTMLElement {
   static getStubConfig() {
     return {
       type: `custom:${CARD_NAME}`,
+      size: "normal",
       entities: [
         {
           entity: "media_player.kodi_wohnzimmer",
@@ -400,6 +405,9 @@ class KodiModularControlCard extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
+    const size = this._normalizeSize(this._config.size);
+    if (size === "large") this.setAttribute("data-size", "large");
+    else this.removeAttribute("data-size");
 
     const entities = this._config.entities || [];
     const entityHtml = entities.length
@@ -422,10 +430,30 @@ class KodiModularControlCard extends HTMLElement {
           --row-height: 56px;
           --bubble-row-height: var(--row-height);
           --bubble-border-radius: calc(var(--row-height, 56px) / 2);
+          --button-size: 36px;
+          --primary-size: 36px;
+          --icon-size: 20px;
+          --title-size: 12px;
+          --title-line: 14px;
+          --lead-wrap-size: 42px;
+          --lead-icon-size: 20px;
+          --controls-gap: 8px;
           --bubble-button-radius: var(--bubble-media-player-buttons-border-radius, 999px);
           --bubble-icon-radius: var(--bubble-media-player-icon-border-radius, 999px);
           --bubble-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
           --bubble-accent-color: #1f97f3;
+        }
+
+        :host([data-size="large"]) {
+          --row-height: 64px;
+          --button-size: 42px;
+          --primary-size: 42px;
+          --icon-size: 22px;
+          --title-size: 13px;
+          --title-line: 16px;
+          --lead-wrap-size: 46px;
+          --lead-icon-size: 22px;
+          --controls-gap: 8px;
         }
 
         ha-card {
@@ -464,8 +492,8 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .bubble-icon-wrap {
-          height: 42px;
-          width: 42px;
+          height: var(--lead-wrap-size);
+          width: var(--lead-wrap-size);
           border-radius: 999px;
           background: var(--bubble-secondary-background-color);
           display: inline-flex;
@@ -475,14 +503,14 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .bubble-icon-wrap ha-icon {
-          --mdc-icon-size: 20px;
+          --mdc-icon-size: var(--lead-icon-size);
           color: var(--bubble-accent-color);
         }
 
         .bubble-title {
           color: var(--primary-text-color);
-          font-size: 12px;
-          line-height: 14px;
+          font-size: var(--title-size);
+          line-height: var(--title-line);
           font-weight: 600;
           white-space: nowrap;
           overflow: hidden;
@@ -493,7 +521,7 @@ class KodiModularControlCard extends HTMLElement {
         .controls {
           display: flex;
           flex-wrap: nowrap;
-          gap: 8px;
+          gap: var(--controls-gap);
           justify-content: flex-end;
           align-items: center;
           flex: 0 0 auto;
@@ -505,8 +533,8 @@ class KodiModularControlCard extends HTMLElement {
           justify-content: center;
           border: 0;
           border-radius: var(--bubble-media-player-buttons-border-radius, var(--bubble-border-radius, calc(var(--row-height,56px)/2)));
-          height: 36px;
-          width: 36px;
+          height: var(--button-size);
+          width: var(--button-size);
           cursor: pointer;
           color: var(--primary-text-color);
           background: var(--bubble-media-player-button-background-color, transparent);
@@ -522,8 +550,8 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         .control.is-primary {
-          height: 36px;
-          width: 36px;
+          height: var(--primary-size);
+          width: var(--primary-size);
           background: var(--bubble-accent-color);
           color: #fff;
           box-shadow: none;
@@ -565,15 +593,10 @@ class KodiModularControlCard extends HTMLElement {
         }
 
         ha-icon {
-          --mdc-icon-size: 20px;
+          --mdc-icon-size: var(--icon-size);
         }
 
         @media (max-width: 600px) {
-          :host {
-            --row-height: 56px;
-            --bubble-row-height: var(--row-height);
-          }
-
           .entity-block {
             height: var(--bubble-row-height);
             padding: 0 8px;
@@ -586,35 +609,35 @@ class KodiModularControlCard extends HTMLElement {
           }
 
           .bubble-icon-wrap {
-            height: 42px;
-            width: 42px;
+            height: var(--lead-wrap-size);
+            width: var(--lead-wrap-size);
           }
 
           .bubble-icon-wrap ha-icon {
-            --mdc-icon-size: 20px;
+            --mdc-icon-size: var(--lead-icon-size);
           }
 
           .bubble-title {
-            font-size: 12px;
-            line-height: 14px;
+            font-size: var(--title-size);
+            line-height: var(--title-line);
           }
 
           .controls {
-            gap: 8px;
+            gap: var(--controls-gap);
           }
 
           .control {
-            height: 36px;
-            width: 36px;
+            height: var(--button-size);
+            width: var(--button-size);
           }
 
           .control.is-primary {
-            height: 36px;
-            width: 36px;
+            height: var(--primary-size);
+            width: var(--primary-size);
           }
 
           ha-icon {
-            --mdc-icon-size: 20px;
+            --mdc-icon-size: var(--icon-size);
           }
         }
 
@@ -632,8 +655,7 @@ class KodiModularControlCard extends HTMLElement {
 
   _renderEntityBlock(entityBlock) {
     const entityId = entityBlock.entity;
-    const attrs = this._getEntityAttributes(entityId);
-    const title = attrs && attrs.friendly_name ? attrs.friendly_name : (entityId || "Kodi");
+    const title = this._getNowPlayingTitle(entityId);
     const modules = Array.isArray(entityBlock.modules) ? entityBlock.modules : [];
 
     const modulesHtml = modules.length
@@ -764,6 +786,20 @@ class KodiModularControlCard extends HTMLElement {
     if (this._stateRefreshTimer) {
       clearInterval(this._stateRefreshTimer);
       this._stateRefreshTimer = null;
+    }
+  }
+
+  _startTitleRefreshTimer() {
+    this._stopTitleRefreshTimer();
+    this._titleRefreshTimer = setInterval(() => {
+      this._render();
+    }, 10000);
+  }
+
+  _stopTitleRefreshTimer() {
+    if (this._titleRefreshTimer) {
+      clearInterval(this._titleRefreshTimer);
+      this._titleRefreshTimer = null;
     }
   }
 
@@ -935,6 +971,22 @@ class KodiModularControlCard extends HTMLElement {
     return stateObj && stateObj.attributes ? stateObj.attributes : {};
   }
 
+  _getNowPlayingTitle(entityId) {
+    const attrs = this._getEntityAttributes(entityId);
+    const mediaTitle =
+      attrs.media_title ||
+      attrs.title ||
+      attrs.now_playing ||
+      attrs.media_series_title;
+    if (mediaTitle) return mediaTitle;
+    if (attrs.friendly_name) return attrs.friendly_name;
+    return entityId || "Kodi";
+  }
+
+  _normalizeSize(value) {
+    return value === "large" ? "large" : "normal";
+  }
+
   _getBubbleControlClass(moduleKey) {
     if (moduleKey === "player_playpause") return "is-primary";
     return "";
@@ -1003,6 +1055,7 @@ class KodiModularControlCardEditor extends HTMLElement {
     const hadType = !!(config && config.type);
     this._config = {
       type: config.type || `custom:${CARD_NAME}`,
+      size: config.size === "large" ? "large" : "normal",
       entities: Array.isArray(config.entities)
         ? config.entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
         : []
@@ -1081,6 +1134,12 @@ class KodiModularControlCardEditor extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <div class="editor">
+        <label>Kartengröße
+          <select id="size">
+            <option value="normal" ${this._config.size === "normal" ? "selected" : ""}>Normal</option>
+            <option value="large" ${this._config.size === "large" ? "selected" : ""}>Large</option>
+          </select>
+        </label>
         <div class="entity-list">${entityRows || "<div class='empty'>Noch keine Kodi Instanz angelegt.</div>"}</div>
         <button id="add-entity">Kodi Instanz hinzufügen</button>
       </div>
@@ -1154,6 +1213,14 @@ class KodiModularControlCardEditor extends HTMLElement {
         }
       </style>
     `;
+
+    const sizeSelect = this.shadowRoot.getElementById("size");
+    if (sizeSelect) {
+      sizeSelect.addEventListener("change", (ev) => {
+        this._config = { ...this._config, size: ev.target.value === "large" ? "large" : "normal" };
+        this._notifyConfigChanged();
+      });
+    }
 
     const addEntityButton = this.shadowRoot.getElementById("add-entity");
     if (addEntityButton) {
@@ -1281,6 +1348,7 @@ class KodiModularControlCardEditor extends HTMLElement {
     }));
     const nextConfig = {
       type: this._config.type || `custom:${CARD_NAME}`,
+      size: this._config.size === "large" ? "large" : "normal",
       entities: sanitizedEntities
     };
     this.dispatchEvent(
