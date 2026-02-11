@@ -66,12 +66,26 @@ entities:
 - `VideoLibrary.GetRecentlyAddedMovies`
 
 ### Player
+- `Player.AddSubtitle`
+- `Player.GetActivePlayers`
+- `Player.GetItem`
+- `Player.GetPlayers`
+- `Player.GetProperties`
+- `Player.GetViewMode`
+- `Player.GoTo`
 - `Player.PlayPause`
+- `Player.Rotate`
+- `Player.Seek`
+- `Player.SetAudioStream`
+- `Player.SetPartymode`
+- `Player.SetRepeat`
+- `Player.SetShuffle`
+- `Player.SetSpeed`
+- `Player.SetSubtitle`
+- `Player.SetVideoStream`
+- `Player.SetViewMode`
 - `Player.Stop`
-- `Player.GoTo (next)`
-- `Player.GoTo (previous)`
-- `Player.SetShuffle (toggle)`
-- `Player.SetRepeat (cycle)`
+- `Player.Zoom`
 
 ## Service-Aufruf
 

@@ -97,6 +97,174 @@ const CONTROL_DEFINITIONS = [
     method: "Player.SetRepeat",
     defaultIcon: "mdi:repeat",
     defaultParams: { playerid: 1, repeat: "cycle" }
+  },
+  {
+    key: "player_add_subtitle",
+    category: "Player",
+    label: "Player.AddSubtitle",
+    method: "Player.AddSubtitle",
+    defaultIcon: "mdi:subtitles-outline",
+    defaultParams: { playerid: 1, subtitle: "special://temp/subtitle.srt" }
+  },
+  {
+    key: "player_get_active_players",
+    category: "Player",
+    label: "Player.GetActivePlayers",
+    method: "Player.GetActivePlayers",
+    defaultIcon: "mdi:account-multiple",
+    defaultParams: {}
+  },
+  {
+    key: "player_get_item",
+    category: "Player",
+    label: "Player.GetItem",
+    method: "Player.GetItem",
+    defaultIcon: "mdi:playlist-play",
+    defaultParams: { playerid: 1, properties: ["title", "album", "artist"] }
+  },
+  {
+    key: "player_get_players",
+    category: "Player",
+    label: "Player.GetPlayers",
+    method: "Player.GetPlayers",
+    defaultIcon: "mdi:devices",
+    defaultParams: {}
+  },
+  {
+    key: "player_get_properties",
+    category: "Player",
+    label: "Player.GetProperties",
+    method: "Player.GetProperties",
+    defaultIcon: "mdi:cog-outline",
+    defaultParams: { playerid: 1, properties: ["speed", "time", "totaltime", "repeat", "shuffled"] }
+  },
+  {
+    key: "player_get_view_mode",
+    category: "Player",
+    label: "Player.GetViewMode",
+    method: "Player.GetViewMode",
+    defaultIcon: "mdi:view-dashboard-outline",
+    defaultParams: { playerid: 1 }
+  },
+  {
+    key: "player_goto_default",
+    category: "Player",
+    label: "Player.GoTo",
+    method: "Player.GoTo",
+    defaultIcon: "mdi:arrow-right-bold-circle-outline",
+    defaultParams: { playerid: 1, to: "next" }
+  },
+  {
+    key: "player_move",
+    category: "Player",
+    label: "Player.Move",
+    method: "Player.Move",
+    defaultIcon: "mdi:cursor-move",
+    defaultParams: { playerid: 1, direction: "left" }
+  },
+  {
+    key: "player_open",
+    category: "Player",
+    label: "Player.Open",
+    method: "Player.Open",
+    defaultIcon: "mdi:play-circle-outline",
+    defaultParams: { item: { playlistid: 0, position: 0 } }
+  },
+  {
+    key: "player_rotate",
+    category: "Player",
+    label: "Player.Rotate",
+    method: "Player.Rotate",
+    defaultIcon: "mdi:rotate-right",
+    defaultParams: { playerid: 1, value: "clockwise" }
+  },
+  {
+    key: "player_seek",
+    category: "Player",
+    label: "Player.Seek",
+    method: "Player.Seek",
+    defaultIcon: "mdi:timeline-clock-outline",
+    defaultParams: { playerid: 1, value: "smallforward" }
+  },
+  {
+    key: "player_set_audio_stream",
+    category: "Player",
+    label: "Player.SetAudioStream",
+    method: "Player.SetAudioStream",
+    defaultIcon: "mdi:audio-input-stereo-minijack",
+    defaultParams: { playerid: 1, stream: "next" }
+  },
+  {
+    key: "player_set_partymode",
+    category: "Player",
+    label: "Player.SetPartymode",
+    method: "Player.SetPartymode",
+    defaultIcon: "mdi:party-popper",
+    defaultParams: { playerid: 1, partymode: "toggle" }
+  },
+  {
+    key: "player_set_repeat",
+    category: "Player",
+    label: "Player.SetRepeat",
+    method: "Player.SetRepeat",
+    defaultIcon: "mdi:repeat",
+    defaultParams: { playerid: 1, repeat: "cycle" }
+  },
+  {
+    key: "player_set_shuffle",
+    category: "Player",
+    label: "Player.SetShuffle",
+    method: "Player.SetShuffle",
+    defaultIcon: "mdi:shuffle-variant",
+    defaultParams: { playerid: 1, shuffle: "toggle" }
+  },
+  {
+    key: "player_set_speed",
+    category: "Player",
+    label: "Player.SetSpeed",
+    method: "Player.SetSpeed",
+    defaultIcon: "mdi:speedometer",
+    defaultParams: { playerid: 1, speed: "increment" }
+  },
+  {
+    key: "player_set_subtitle",
+    category: "Player",
+    label: "Player.SetSubtitle",
+    method: "Player.SetSubtitle",
+    defaultIcon: "mdi:subtitles",
+    defaultParams: { playerid: 1, subtitle: "next", enable: true }
+  },
+  {
+    key: "player_set_video_stream",
+    category: "Player",
+    label: "Player.SetVideoStream",
+    method: "Player.SetVideoStream",
+    defaultIcon: "mdi:video-input-component",
+    defaultParams: { playerid: 1, stream: "next" }
+  },
+  {
+    key: "player_set_view_mode",
+    category: "Player",
+    label: "Player.SetViewMode",
+    method: "Player.SetViewMode",
+    defaultIcon: "mdi:view-dashboard-edit-outline",
+    defaultParams: { playerid: 1, viewmode: "normal" }
+  },
+  {
+    key: "player_stop_default",
+    category: "Player",
+    label: "Player.Stop",
+    method: "Player.Stop",
+    defaultIcon: "mdi:stop",
+    defaultParams: { playerid: 1 }
+  },
+  {
+    key: "player_zoom",
+    category: "Player",
+    label: "Player.Zoom",
+    method: "Player.Zoom",
+    defaultIcon: "mdi:magnify-plus-outline",
+    defaultParams: { playerid: 1, zoom: "in" }
   }
 ];
 
@@ -318,14 +486,18 @@ class KodiModularControlCard extends HTMLElement {
   }
 
   _getToggleStateClass(entityId, moduleKey) {
-    if (moduleKey !== "player_shuffle" && moduleKey !== "player_repeat") {
+    const isShuffleKey =
+      moduleKey === "player_shuffle" || moduleKey === "player_set_shuffle";
+    const isRepeatKey =
+      moduleKey === "player_repeat" || moduleKey === "player_set_repeat";
+    if (!isShuffleKey && !isRepeatKey) {
       return "";
     }
     const hassStates = this._hass && this._hass.states ? this._hass.states : {};
     const stateObj = hassStates[entityId];
     const attrs = stateObj && stateObj.attributes ? stateObj.attributes : {};
 
-    if (moduleKey === "player_shuffle") {
+    if (isShuffleKey) {
       const value = attrs.shuffle;
       if (typeof value === "boolean") return value ? "state-on" : "state-off";
       if (typeof value === "string") {
