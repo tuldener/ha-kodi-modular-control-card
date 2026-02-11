@@ -353,12 +353,16 @@ class KodiModularControlCard extends HTMLElement {
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._syncToggleStateCacheFromEntityAttributes();
+    if (this._hass) {
+      this._refreshToggleStateCache();
+    }
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
     this._syncToggleStateCacheFromEntityAttributes();
+    this._refreshToggleStateCache();
     this._render();
   }
 
