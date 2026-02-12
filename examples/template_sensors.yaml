@@ -1,0 +1,39 @@
+template:
+  - sensor:
+      - name: "Kodi Kabine 02 Shuffle Status"
+        unique_id: kodi_kabine_02_shuffle_status
+        state: >
+          {% set v = state_attr('media_player.kabine_02', 'shuffled') %}
+          {% if v is sameas true %}on
+          {% elif v is sameas false %}off
+          {% else %}
+            {% set s = state_attr('media_player.kabine_02', 'shuffle') %}
+            {% if s in ['on', 'true', 'all', '1'] %}on
+            {% elif s in ['off', 'false', 'none', '0'] %}off
+            {% else %}unknown{% endif %}
+          {% endif %}
+        icon: >
+          {% set v = state_attr('media_player.kabine_02', 'shuffled') %}
+          {% if v is sameas true %}mdi:shuffle-variant
+          {% elif v is sameas false %}mdi:shuffle-disabled
+          {% else %}
+            {% set s = state_attr('media_player.kabine_02', 'shuffle') %}
+            {% if s in ['on', 'true', 'all', '1'] %}mdi:shuffle-variant
+            {% elif s in ['off', 'false', 'none', '0'] %}mdi:shuffle-disabled
+            {% else %}mdi:help-circle-outline{% endif %}
+          {% endif %}
+
+      - name: "Kodi Kabine 02 Repeat Status"
+        unique_id: kodi_kabine_02_repeat_status
+        state: >
+          {% set r = state_attr('media_player.kabine_02', 'repeat') %}
+          {% if r in ['off', 'none', 'one', 'all'] %}{{ r }}
+          {% elif r is sameas true %}all
+          {% elif r is sameas false %}off
+          {% else %}unknown{% endif %}
+        icon: >
+          {% set r = state_attr('media_player.kabine_02', 'repeat') %}
+          {% if r in ['all', true] %}mdi:repeat
+          {% elif r == 'one' %}mdi:repeat-once
+          {% elif r in ['off', 'none', false] %}mdi:repeat-off
+          {% else %}mdi:help-circle-outline{% endif %}

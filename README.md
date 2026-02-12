@@ -134,3 +134,13 @@ playerid: 1
 
 - Für `Player.*` Methoden mit `playerid` löst die Karte die aktive `playerid` pro Kodi-Instanz automatisch auf (Fallback auf konfigurierten Wert).
 - Zusätzliche JSON-RPC-Methoden können über weitere Module im Code ergänzt werden.
+
+## Template-Sensoren (Shuffle/Repeat)
+
+Fertige Vorlage:
+- `examples/template_sensors.yaml`
+
+Einbindung in Home Assistant:
+1. Dateiinhalt nach `configuration.yaml` oder `templates.yaml` übernehmen.
+2. `media_player.kabine_02` durch deine Kodi-Entity ersetzen.
+3. Template-Entitäten neu laden (oder HA neu starten).
