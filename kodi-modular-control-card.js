@@ -806,6 +806,7 @@ class KodiModularControlCard extends HTMLElement {
       this._busy = true;
       this._render();
       let responsePayload = null;
+      let rawResponse = null;
       if (definition.method === "__ha_service__") {
         const domain = mergedParams.domain || "script";
         const service = mergedParams.service || "turn_on";
@@ -818,19 +819,23 @@ class KodiModularControlCard extends HTMLElement {
           delete serviceData.service;
           delete serviceData.service_data;
         }
-        responsePayload = await this._callServiceWithOptionalResponse(domain, service, serviceData);
+        rawResponse = await this._callServiceWithOptionalResponse(domain, service, serviceData);
+        responsePayload = rawResponse;
       } else if (QUERY_METHODS_WITH_RESULT.has(definition.method)) {
-        responsePayload = await this._callKodiMethodWithResponse(entityId, definition.method, mergedParams);
-        const extracted = this._extractKodiResult(responsePayload);
+        rawResponse = await this._callKodiMethodWithResponse(entityId, definition.method, mergedParams);
+        const extracted = this._extractKodiResult(rawResponse);
         if (typeof extracted !== "undefined" && extracted !== null) {
           responsePayload = extracted;
+        } else {
+          responsePayload = rawResponse;
         }
       } else {
-        responsePayload = await this._callServiceWithOptionalResponse("kodi", "call_method", payload);
+        rawResponse = await this._callServiceWithOptionalResponse("kodi", "call_method", payload);
+        responsePayload = rawResponse;
       }
       this._applyOptimisticToggleState(entityId, moduleKey, mergedParams);
       this._addDebugEntry(
-        `${new Date().toLocaleTimeString()} ${entityId} ${definition.method} -> ${this._formatDebugPayload(responsePayload)}`
+        `${new Date().toLocaleTimeString()} ${entityId} ${definition.method} -> response=${this._formatDebugPayload(responsePayload)} raw=${this._formatDebugPayload(rawResponse)}`
       );
     } catch (err) {
       this._addDebugEntry(
