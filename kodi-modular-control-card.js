@@ -829,6 +829,9 @@ class KodiModularControlCard extends HTMLElement {
         } else {
           responsePayload = rawResponse;
         }
+        if (!this._hasMeaningfulPayload(responsePayload) && definition.method === "Player.GetProperties") {
+          responsePayload = this._buildGetPropertiesFallback(entityId, mergedParams.playerid);
+        }
       } else {
         rawResponse = await this._callServiceWithOptionalResponse("kodi", "call_method", payload);
         responsePayload = rawResponse;
@@ -1215,6 +1218,26 @@ class KodiModularControlCard extends HTMLElement {
     } catch (err) {
       return String(payload);
     }
+  }
+
+  _hasMeaningfulPayload(payload) {
+    if (payload === null || typeof payload === "undefined") return false;
+    if (payload && payload.__note) return false;
+    if (typeof payload === "string") return payload.trim().length > 0;
+    if (typeof payload === "object") return Object.keys(payload).length > 0;
+    return true;
+  }
+
+  _buildGetPropertiesFallback(entityId, playerId) {
+    const attrs = this._getEntityAttributes(entityId);
+    const shuffledRaw = typeof attrs.shuffled !== "undefined" ? attrs.shuffled : attrs.shuffle;
+    const repeatRaw = typeof attrs.repeat !== "undefined" ? attrs.repeat : "unknown";
+    return {
+      _fallback: "entity_state",
+      playerid: typeof playerId !== "undefined" ? playerId : this._resolvePlayerId(entityId, {}),
+      shuffled: shuffledRaw,
+      repeat: repeatRaw
+    };
   }
 
   _normalizeSize(value) {
