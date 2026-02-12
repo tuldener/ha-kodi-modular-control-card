@@ -385,17 +385,20 @@ class KodiModularControlCard extends HTMLElement {
     this._statusRefreshInFlight = false;
     this._titleRefreshTimer = null;
     this._debugEntries = [];
+    this._initialRefreshScheduled = false;
+    this._initialRefreshRetries = [0, 1000, 3000];
   }
 
   connectedCallback() {
     this._startStateRefreshTimer();
     this._startTitleRefreshTimer();
-    this._refreshToggleStateCacheFromKodi();
+    this._requestInitialStatusRefresh();
   }
 
   disconnectedCallback() {
     this._stopStateRefreshTimer();
     this._stopTitleRefreshTimer();
+    this._initialRefreshScheduled = false;
   }
 
   setConfig(config) {
@@ -406,14 +409,14 @@ class KodiModularControlCard extends HTMLElement {
       entities: entities.map((item) => ({ ...defaultEntityBlock(), ...item }))
     };
     this._syncToggleStateCacheFromEntityAttributes();
-    this._refreshToggleStateCacheFromKodi();
+    this._requestInitialStatusRefresh();
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
     this._syncToggleStateCacheFromEntityAttributes();
-    this._refreshToggleStateCacheFromKodi();
+    this._requestInitialStatusRefresh();
     this._render();
   }
 
@@ -892,6 +895,20 @@ class KodiModularControlCard extends HTMLElement {
       this._refreshToggleStateCacheFromKodi();
       this._render();
     }, 60000);
+  }
+
+  _requestInitialStatusRefresh() {
+    if (this._initialRefreshScheduled) return;
+    const entities = Array.isArray(this._config.entities) ? this._config.entities : [];
+    const hasEntities = entities.some((item) => item && item.entity);
+    if (!this._hass || !hasEntities) return;
+
+    this._initialRefreshScheduled = true;
+    this._initialRefreshRetries.forEach((delay) => {
+      setTimeout(() => {
+        this._refreshToggleStateCacheFromKodi();
+      }, delay);
+    });
   }
 
   _stopStateRefreshTimer() {
