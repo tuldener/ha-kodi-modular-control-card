@@ -995,32 +995,60 @@ class KodiModularControlCard extends HTMLElement {
   }
 
   async _callKodiMethodWithResponse(entityId, method, params) {
-    if (!this._hass || !this._hass.callApi) return null;
-    try {
-      return await this._hass.callApi("POST", "services/kodi/call_method?return_response", {
-        entity_id: entityId,
-        method,
-        ...(params || {})
-      });
-    } catch (err) {
-      return null;
-    }
+    const payload = {
+      entity_id: entityId,
+      method,
+      ...(params || {})
+    };
+    return this._callServiceWithResponse("kodi", "call_method", payload);
   }
 
   async _callServiceWithOptionalResponse(domain, service, data) {
-    if (this._config.debug && this._hass && this._hass.callApi) {
+    if (this._config.debug || QUERY_METHODS_WITH_RESULT.has((data && data.method) || "")) {
+      return this._callServiceWithResponse(domain, service, data || {});
+    }
+    await this._hass.callService(domain, service, data || {});
+    return { __note: "call_service_without_response" };
+  }
+
+  async _callServiceWithResponse(domain, service, data) {
+    if (!this._hass) return null;
+
+    // Preferred path in HA frontend for service responses.
+    if (this._hass.callWS) {
+      try {
+        return await this._hass.callWS({
+          type: "call_service",
+          domain,
+          service,
+          service_data: data || {},
+          return_response: true
+        });
+      } catch (err) {
+        // fall through
+      }
+    }
+
+    // REST fallback where supported by backend.
+    if (this._hass.callApi) {
       try {
         return await this._hass.callApi("POST", `services/${domain}/${service}?return_response`, data || {});
       } catch (err) {
-        // fall through to callService
+        // fall through
       }
     }
+
     await this._hass.callService(domain, service, data || {});
-    return null;
+    return { __note: "fallback_no_response" };
   }
 
   _extractKodiResult(response) {
     if (!response) return null;
+
+    if (response.response) {
+      const extracted = this._extractKodiResult(response.response);
+      if (typeof extracted !== "undefined" && extracted !== null) return extracted;
+    }
 
     if (typeof response.result !== "undefined") {
       const nested = response.result;
@@ -1179,7 +1207,9 @@ class KodiModularControlCard extends HTMLElement {
   }
 
   _formatDebugPayload(payload) {
-    if (payload === null || typeof payload === "undefined") return "ok (ohne response)";
+    if (payload === null || typeof payload === "undefined") return "keine response";
+    if (payload && payload.__note === "fallback_no_response") return "keine response (fallback callService)";
+    if (payload && payload.__note === "call_service_without_response") return "response nicht angefordert";
     try {
       return JSON.stringify(payload);
     } catch (err) {
